@@ -84,29 +84,8 @@ public class TaxiWalk
 				}
 				findEndpoint += System.currentTimeMillis() - time;
 				
-				// Check for loop.
-				time = System.currentTimeMillis();
-				int x = 0;
-				int y = 0;
-				boolean loop = x == endX && y == endY;
-				int i = 0;
-				// Possible add -12 to make faster.
-				while(!loop && i < movedState.pattern.length() - 1)
-				{					
-					if(movedState.pattern.charAt(i) == 'H')
-					{
-						x += 1 - 2 * Math.abs(y % 2);
-					}
-					else
-					{
-						y += 1 - 2 * Math.abs(x % 2);
-					}
-					loop = x == endX && y == endY;
-					i++;
-				}
-				hasLoop += System.currentTimeMillis() - time;
-				
-				if(!loop)
+				// Check for loop.		
+				if(!hasLoop(movedState.pattern, endX, endY))
 				{
 					
 					time = System.currentTimeMillis();
@@ -130,7 +109,7 @@ public class TaxiWalk
 					if(movedState.pattern.charAt(0) == 'V')
 					{
 						StringBuilder newPattern = new StringBuilder("");
-						for(i = 0; i < movedState.pattern.length(); i++)
+						for(int i = 0; i < movedState.pattern.length(); i++)
 						{
 							if(movedState.pattern.charAt(i) == 'H')
 							{
@@ -158,7 +137,7 @@ public class TaxiWalk
 					}
 					else
 					{
-						// Absent from tree, add the temp State.
+						// Absent from tree, add the temporary State.
 						time = System.currentTimeMillis();
 						end = new State(movedState.pattern);
 						automaton.add(end);
@@ -192,30 +171,8 @@ public class TaxiWalk
 				}
 				findEndpoint += System.currentTimeMillis() - time;
 				
-				time = System.currentTimeMillis();
 				// Check for loop.
-				int x = 0;
-				int y = 0;
-				boolean loop = x == endX && y == endY;
-				int i = 0;
-				// Possible add -12 to make faster.
-				while(!loop && i < movedState.pattern.length() - 1)
-				{					
-					if(movedState.pattern.charAt(i) == 'H')
-					{
-						x += 1 - 2 * Math.abs(y % 2);
-					}
-					else
-					{
-						y += 1 - 2 * Math.abs(x % 2);
-					}
-					loop = x == endX && y == endY;
-					i++;
-				}
-				hasLoop += System.currentTimeMillis() - time;
-				
-				// Hope the State pointers start as null.
-				if(!loop)
+				if(!hasLoop(movedState.pattern, endX, endY))
 				{
 					time = System.currentTimeMillis();
 					// If cannot loop, chop off first step.
@@ -238,7 +195,7 @@ public class TaxiWalk
 					if(movedState.pattern.charAt(0) == 'V')
 					{
 						StringBuilder newPattern = new StringBuilder("");
-						for(i = 0; i < movedState.pattern.length(); i++)
+						for(int i = 0; i < movedState.pattern.length(); i++)
 						{
 							if(movedState.pattern.charAt(i) == 'H')
 							{
@@ -265,7 +222,7 @@ public class TaxiWalk
 					}
 					else
 					{
-						// Absent from tree, add the temp State.
+						// Absent from tree, add the temporary State.
 						time = System.currentTimeMillis();
 						end = new State(movedState.pattern);
 						automaton.add(end);
@@ -286,5 +243,29 @@ public class TaxiWalk
 		System.out.println("Reduce Pattern: " + reduce / 1000.0 + "(" + Math.round((double) reduce / (endTime - startTime) * 1000) / 10.0 + "%)");
 		System.out.println("Tree Contains: " + contains / 1000.0 + "(" + Math.round((double) contains / (endTime - startTime) * 1000) / 10.0 + "%)");
 		System.out.println("Tree Add: " + add / 1000.0 + "(" + Math.round((double) add / (endTime - startTime) * 1000) / 10.0 + "%)");
+	}
+	
+	public static boolean hasLoop(String pattern, int endX, int endY)
+	{
+		long time = System.currentTimeMillis();
+		int x = 0;
+		int y = 0;
+		boolean loop = x == endX && y == endY;
+		int i = 0;
+		while(!loop && i < pattern.length() - 12)
+		{					
+			if(pattern.charAt(i) == 'H')
+			{
+				x += 1 - 2 * Math.abs(y % 2);
+			}
+			else
+			{
+				y += 1 - 2 * Math.abs(x % 2);
+			}
+			loop = x == endX && y == endY;
+			i++;
+		}
+		hasLoop += System.currentTimeMillis() - time;
+		return loop;
 	}
 }
