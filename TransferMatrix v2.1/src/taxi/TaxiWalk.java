@@ -7,12 +7,12 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.TreeSet;
+import java.util.TreeMap;
 
 public class TaxiWalk
 {
 	// The length of walk to enumerate.
-	public static final int N = 43;
+	public static final int N = 47;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -21,14 +21,13 @@ public class TaxiWalk
 	public static int[] stepsToOrigin = new int[LATTICE_SIZE];
 	
 	// Used for building the automaton.
-	public static TreeSet<State> automaton = new TreeSet<State>();
+	public static TreeMap<String, State> automaton = new TreeMap<String, State>();
 	public static LinkedList<State> untreated = new LinkedList<State>();
 	
 	public static long findEndpoint = 0;
 	public static long hasLoop = 0;
 	public static long reduce = 0;
 	public static long contains = 0;
-	public static long add = 0;
 	
 	public static void main(String args[])
 	{
@@ -51,7 +50,7 @@ public class TaxiWalk
 		
 		// Set up the automaton stuff.
 		State genesis = new State("");
-		automaton.add(genesis);
+		automaton.put("", genesis);
 		untreated.add(genesis);
 		
 		
@@ -127,24 +126,33 @@ public class TaxiWalk
 					
 					time = System.currentTimeMillis();
 					// Probably runs O(logn) search twice, bad but necessary if using TreeSet.
-					State end = automaton.ceiling(movedState);
-					boolean found = end == automaton.floor(movedState);
-					contains += System.currentTimeMillis() - time;
-					if(found)
+					State end = new State(movedState.pattern);
+					State temp = automaton.putIfAbsent(movedState.pattern, end);
+					if(temp != null)
 					{
-						// Present in tree.
-						start.horizontal = end;
+						start.horizontal = temp;
 					}
 					else
 					{
-						// Absent from tree, add the temporary State.
-						time = System.currentTimeMillis();
-						end = new State(movedState.pattern);
-						automaton.add(end);
+						start.horizontal = end;
 						untreated.add(end);
-						start.horizontal = movedState;
-						add += System.currentTimeMillis() - time;
 					}
+					contains += System.currentTimeMillis() - time;
+//					if(found)
+//					{
+//						// Present in tree.
+//						start.horizontal = end;
+//					}
+//					else
+//					{
+//						// Absent from tree, add the temporary State.
+//						time = System.currentTimeMillis();
+//						end = new State(movedState.pattern);
+//						automaton.add(end);
+//						untreated.add(end);
+//						start.horizontal = movedState;
+//						add += System.currentTimeMillis() - time;
+//					}
 				}
 			}
 	
@@ -211,25 +219,18 @@ public class TaxiWalk
 					reduce += System.currentTimeMillis() - time;
 					
 					time = System.currentTimeMillis();
-					// Probably runs O(logn) search twice, bad but necessary if using TreeSet.
-					State end = automaton.ceiling(movedState);
-					boolean found = end == automaton.floor(movedState);
-					contains += System.currentTimeMillis() - time;
-					if(found)
+					State end = new State(movedState.pattern);
+					State temp = automaton.putIfAbsent(movedState.pattern, end);
+					if(temp != null)
 					{
-						// Present in tree.
-						start.vertical = end;
+						start.vertical = temp;
 					}
 					else
 					{
-						// Absent from tree, add the temporary State.
-						time = System.currentTimeMillis();
-						end = new State(movedState.pattern);
-						automaton.add(end);
+						start.vertical = end;
 						untreated.add(end);
-						start.vertical = movedState;
-						add += System.currentTimeMillis() - time;
 					}
+					contains += System.currentTimeMillis() - time;
 				}
 			}
 		}
@@ -242,7 +243,6 @@ public class TaxiWalk
 		System.out.println("Has Loop: " + hasLoop / 1000.0 + "(" + Math.round((double) hasLoop / (endTime - startTime) * 1000) / 10.0 + "%)");
 		System.out.println("Reduce Pattern: " + reduce / 1000.0 + "(" + Math.round((double) reduce / (endTime - startTime) * 1000) / 10.0 + "%)");
 		System.out.println("Tree Contains: " + contains / 1000.0 + "(" + Math.round((double) contains / (endTime - startTime) * 1000) / 10.0 + "%)");
-		System.out.println("Tree Add: " + add / 1000.0 + "(" + Math.round((double) add / (endTime - startTime) * 1000) / 10.0 + "%)");
 	}
 	
 	public static boolean hasLoop(String pattern, int endX, int endY)
