@@ -54,7 +54,7 @@ public class TaxiWalk
 		untreated.addLast(genesis);
 		
 		// Main automaton-generating code.
-		State movedState = new State(new Pattern(0L, (byte) 0));
+		Pattern pattern = new Pattern(0L, (byte) 0);
 		while(!untreated.isEmpty())
 		{
 			State start = untreated.removeFirst();
@@ -62,19 +62,17 @@ public class TaxiWalk
 			// Try to take a horizontal step.
 			if(start.pattern.length < 2 || start.pattern.steps >>> (start.pattern.length - 2) != 0b10)
 			{
-				movedState.pattern.steps = start.pattern.steps;
-				movedState.pattern.length = (byte) (start.pattern.length + 1);
+				pattern.steps = start.pattern.steps;
+				pattern.length = (byte) (start.pattern.length + 1);
 				
 				
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
 				int endY = 0;
-				for(int i = 0; i < movedState.pattern.length; i++)
+				for(int i = 0; i < pattern.length; i++)
 				{
-					// Try flip for speed-up.
-//					if((movedState.pattern.steps & (1L << i)) == 0)
-					if((movedState.pattern.steps >>> i & 1) == 0)
+					if((pattern.steps >>> i & 1) == 0)
 					{	
 						endX += 1 - 2 * Math.abs(endY % 2);		
 					}
@@ -86,13 +84,13 @@ public class TaxiWalk
 				findEndpoint += System.currentTimeMillis() - time;
 				
 				// Check for loop.		
-				if(!hasLoop(movedState.pattern, endX, endY))
+				if(!hasLoop(pattern, endX, endY))
 				{
 					// If cannot loop, chop off first step.
 					time = System.currentTimeMillis();
-					while(stepsToOrigin[(endX + MAX_N) * DIM + endY + MAX_N] > N - movedState.pattern.length)
+					while(stepsToOrigin[(endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
 					{
-						if((movedState.pattern.steps & 1) == 0)
+						if((pattern.steps & 1) == 0)
 						{
 							endX -= 1;
 							endY = -endY;
@@ -102,20 +100,20 @@ public class TaxiWalk
 							endX = -endX;
 							endY -= 1;
 						}
-						movedState.pattern.steps = movedState.pattern.steps >>> 1;
-						movedState.pattern.length--;
+						pattern.steps = pattern.steps >>> 1;
+						pattern.length--;
 					}
 					
 					// If first step is now vertical, flip to horizontal. "ST" encoding faster?
-					if((movedState.pattern.steps & 1) == 1)
+					if((pattern.steps & 1) == 1)
 					{
-						movedState.pattern.steps = movedState.pattern.steps ^ ((1L << movedState.pattern.length) - 1);
+						pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
 					}
 					reduce += System.currentTimeMillis() - time;
 					
 					
 					time = System.currentTimeMillis();
-					State end = new State(new Pattern(movedState.pattern.steps, movedState.pattern.length));
+					State end = new State(new Pattern(pattern.steps, pattern.length));
 					// Runs 2logn comparisons, could be improved.
 					State temp = automaton.putIfAbsent(end.pattern, end);
 					if(temp != null)
@@ -127,7 +125,7 @@ public class TaxiWalk
 					{
 						// Added to tree.
 						start.horizontal = end;
-						untreated.add(end);
+						untreated.addLast(end);
 					}
 					contains += System.currentTimeMillis() - time;
 				}
@@ -137,18 +135,16 @@ public class TaxiWalk
 			// Try to take a vertical step.
 			if(start.pattern.length < 2 || start.pattern.steps >>> (start.pattern.length - 2) != 0b01)
 			{
-				movedState.pattern.steps = start.pattern.steps | (1L << start.pattern.length);
-				movedState.pattern.length = (byte) (start.pattern.length + 1);
+				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
+				pattern.length = (byte) (start.pattern.length + 1);
 				
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
 				int endY = 0;
-				for(int i = 0; i < movedState.pattern.length; i++)
+				for(int i = 0; i < pattern.length; i++)
 				{
-					// Try flip for speed-up.
-//					if((movedState.pattern.steps & (1L << i)) == 0)
-					if((movedState.pattern.steps >>> i & 1) == 0)
+					if((pattern.steps >>> i & 1) == 0)
 					{	
 						endX += 1 - 2 * Math.abs(endY % 2);
 					}
@@ -160,13 +156,13 @@ public class TaxiWalk
 				findEndpoint += System.currentTimeMillis() - time;
 				
 				// Check for loop.		
-				if(!hasLoop(movedState.pattern, endX, endY))
+				if(!hasLoop(pattern, endX, endY))
 				{
 					// If cannot loop, chop off first step.
 					time = System.currentTimeMillis();
-					while(stepsToOrigin[(endX + MAX_N) * DIM + endY + MAX_N] > N - movedState.pattern.length)
+					while(stepsToOrigin[(endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
 					{
-						if((movedState.pattern.steps & 1) == 0)
+						if((pattern.steps & 1) == 0)
 						{
 							endX -= 1;
 							endY = -endY;
@@ -176,20 +172,20 @@ public class TaxiWalk
 							endX = -endX;
 							endY -= 1;
 						}
-						movedState.pattern.steps = movedState.pattern.steps >>> 1;
-						movedState.pattern.length--;
+						pattern.steps = pattern.steps >>> 1;
+						pattern.length--;
 					}
 					
 					// If first step is now vertical, flip to horizontal. "ST" encoding faster?
-					if((movedState.pattern.steps & 1) == 1)
+					if((pattern.steps & 1) == 1)
 					{
-						movedState.pattern.steps = movedState.pattern.steps ^ ((1L << movedState.pattern.length) - 1);
+						pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
 					}
 					reduce += System.currentTimeMillis() - time;
 					
 					
 					time = System.currentTimeMillis();
-					State end = new State(new Pattern(movedState.pattern.steps, movedState.pattern.length));
+					State end = new State(new Pattern(pattern.steps, pattern.length));
 					// Runs 2logn comparisons, could be improved.
 					State temp = automaton.putIfAbsent(end.pattern, end);
 					if(temp != null)
@@ -201,7 +197,7 @@ public class TaxiWalk
 					{
 						// Added to tree.
 						start.vertical = end;
-						untreated.add(end);
+						untreated.addLast(end);
 					}
 					contains += System.currentTimeMillis() - time;
 				}
