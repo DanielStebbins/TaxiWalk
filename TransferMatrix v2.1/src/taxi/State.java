@@ -2,11 +2,11 @@ package taxi;
 
 public class State implements Comparable<State>
 {
-	public String pattern;
+	public Pattern pattern;
 	public State horizontal;
 	public State vertical;
 	
-	public State(String pattern)
+	public State(Pattern pattern)
 	{
 		this.pattern = pattern;
 	}
