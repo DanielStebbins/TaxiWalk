@@ -15,12 +15,10 @@ public class Pattern implements Comparable<Pattern>
 	@Override
 	public int compareTo(Pattern o)
 	{
-//		System.out.println("Compare Lengths: " + length + ", " + o.length);
 		if(length != o.length)
 		{
 			return length - o.length;
 		}
-//		System.out.println("Compare Steps: " + Long.toBinaryString(steps) + ", " + Long.toBinaryString(o.steps));
 		// Stolen from Java Long.
 		return (steps < o.steps) ? -1 : ((steps == o.steps) ? 0 : 1);
 	}

@@ -83,6 +83,7 @@ public class TaxiWalk
 				}
 				findEndpoint += System.currentTimeMillis() - time;
 				
+				
 				// Check for loop.		
 				if(!hasLoop(pattern, endX, endY))
 				{
@@ -130,13 +131,14 @@ public class TaxiWalk
 					contains += System.currentTimeMillis() - time;
 				}
 			}
-	
+			
 			
 			// Try to take a vertical step.
 			if(start.pattern.length < 2 || start.pattern.steps >>> (start.pattern.length - 2) != 0b01)
 			{
 				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
 				pattern.length = (byte) (start.pattern.length + 1);
+				
 				
 				// Find end point.
 				long time = System.currentTimeMillis();
@@ -154,6 +156,7 @@ public class TaxiWalk
 					}
 				}
 				findEndpoint += System.currentTimeMillis() - time;
+				
 				
 				// Check for loop.		
 				if(!hasLoop(pattern, endX, endY))
