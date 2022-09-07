@@ -1,4 +1,4 @@
-// Record: N=47 in 30.0 seconds.
+// Record: N=47 in 24.04 seconds.
 
 package taxi;
 
@@ -7,12 +7,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.TreeMap;
 
 public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
-	public static final int N = 47;
+	public static final int N = 43;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -21,7 +20,9 @@ public class TaxiWalk
 	public static int[] stepsToOrigin = new int[LATTICE_SIZE];
 	
 	// Used for building the automaton.
-	public static TreeMap<Pattern, State> automaton = new TreeMap<Pattern, State>();
+//	public static TreeMap<Pattern, State> automaton = new TreeMap<Pattern, State>();
+	public static State genesis = new State(new Pattern(0L, (byte) 0));
+	public static Automaton automaton = new Automaton(genesis);
 	public static LinkedList<State> untreated = new LinkedList<State>();
 	
 	public static long findEndpoint = 0;
@@ -49,12 +50,11 @@ public class TaxiWalk
 		long startTime = System.currentTimeMillis();
 		
 		// Set up the automaton stuff.
-		State genesis = new State(new Pattern(0L, (byte) 0));
-		automaton.put(genesis.pattern, genesis);
 		untreated.addLast(genesis);
 		
 		// Main automaton-generating code.
 		Pattern pattern = new Pattern(0L, (byte) 0);
+		State end = new State(pattern);
 		while(!untreated.isEmpty())
 		{
 			State start = untreated.removeFirst();
@@ -114,19 +114,19 @@ public class TaxiWalk
 					
 					
 					time = System.currentTimeMillis();
-					State end = new State(new Pattern(pattern.steps, pattern.length));
-					// Runs 2logn comparisons, could be improved.
-					State temp = automaton.putIfAbsent(end.pattern, end);
-					if(temp != null)
-					{
-						// Present in tree.
-						start.horizontal = temp;
-					}
-					else
+					end.pattern = new Pattern(pattern.steps, pattern.length);
+					State temp = automaton.putIfAbsent(end);
+					if(temp == null)
 					{
 						// Added to tree.
 						start.horizontal = end;
 						untreated.addLast(end);
+						end = new State(new Pattern(pattern.steps, pattern.length));
+					}
+					else
+					{
+						// Present in tree.
+						start.horizontal = temp;
 					}
 					contains += System.currentTimeMillis() - time;
 				}
@@ -188,19 +188,19 @@ public class TaxiWalk
 					
 					
 					time = System.currentTimeMillis();
-					State end = new State(new Pattern(pattern.steps, pattern.length));
-					// Runs 2logn comparisons, could be improved.
-					State temp = automaton.putIfAbsent(end.pattern, end);
-					if(temp != null)
-					{
-						// Present in tree.		
-						start.vertical = temp;
-					}
-					else
+					end.pattern = new Pattern(pattern.steps, pattern.length);
+					State temp = automaton.putIfAbsent(end);
+					if(temp == null)
 					{
 						// Added to tree.
 						start.vertical = end;
 						untreated.addLast(end);
+						end = new State(new Pattern(pattern.steps, pattern.length));
+					}
+					else
+					{
+						// Present in tree.		
+						start.vertical = temp;
 					}
 					contains += System.currentTimeMillis() - time;
 				}
@@ -208,8 +208,8 @@ public class TaxiWalk
 		}
 		long endTime = System.currentTimeMillis();
 		System.out.println("N: " + N);
-		System.out.println(automaton.size());
-		System.out.println((endTime - startTime) / 1000.0 + "\n");
+		System.out.println("Automaton Size: " + automaton.size);
+		System.out.println("Total Time: " + (endTime - startTime) / 1000.0 + "\n");
 		
 		System.out.println("Find Endpoint: " + findEndpoint / 1000.0 + "(" + Math.round((double) findEndpoint / (endTime - startTime) * 1000) / 10.0 + "%)");
 		System.out.println("Has Loop: " + hasLoop / 1000.0 + "(" + Math.round((double) hasLoop / (endTime - startTime) * 1000) / 10.0 + "%)");

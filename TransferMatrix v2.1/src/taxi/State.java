@@ -6,6 +6,12 @@ public class State implements Comparable<State>
 	public State horizontal;
 	public State vertical;
 	
+	// For the red-black tree (red = true, black = false).
+	public boolean color;
+	public State parent;
+	public State left;
+	public State right;
+	
 	public State(Pattern pattern)
 	{
 		this.pattern = pattern;
