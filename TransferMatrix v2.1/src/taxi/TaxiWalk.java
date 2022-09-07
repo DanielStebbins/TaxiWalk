@@ -16,7 +16,8 @@ public class TaxiWalk
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
 	public static final int DIM = 2 * MAX_N + 1;
-	public static final int LATTICE_SIZE = DIM * DIM;
+	public static final int OFFSET = DIM * DIM;
+	public static final int LATTICE_SIZE = OFFSET * 4;
 	public static int[] stepsToOrigin = new int[LATTICE_SIZE];
 	
 	// Used for building the automaton.
@@ -35,7 +36,7 @@ public class TaxiWalk
 		// Read the steps to the origin from every point, which have been previously calculated and stored.
 		try
 		{
-			BufferedReader reader = new BufferedReader(new FileReader(new File("StepsToOrigin100.txt")));
+			BufferedReader reader = new BufferedReader(new FileReader(new File("StepsToOrigin.txt")));
 			String[] split = reader.readLine().split(" ");
 			for(int i = 0; i < LATTICE_SIZE; i++)
 			{
