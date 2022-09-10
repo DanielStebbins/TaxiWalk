@@ -1,4 +1,4 @@
-// Record: N=47 in 24.04 seconds.
+// Record: N=47 in 20.7 seconds.
 
 package taxi;
 
@@ -16,11 +16,11 @@ public class TaxiWalk
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
 	public static final int DIM = 2 * MAX_N + 1;
-	public static final int LATTICE_SIZE = DIM * DIM;
+	public static final int OFFSET = DIM * DIM;
+	public static final int LATTICE_SIZE = OFFSET * 4;
 	public static int[] stepsToOrigin = new int[LATTICE_SIZE];
 	
 	// Used for building the automaton.
-//	public static TreeMap<Pattern, State> automaton = new TreeMap<Pattern, State>();
 	public static State genesis = new State(new Pattern(0L, (byte) 0));
 	public static Automaton automaton = new Automaton(genesis);
 	public static LinkedList<State> untreated = new LinkedList<State>();
@@ -35,7 +35,7 @@ public class TaxiWalk
 		// Read the steps to the origin from every point, which have been previously calculated and stored.
 		try
 		{
-			BufferedReader reader = new BufferedReader(new FileReader(new File("StepsToOrigin100.txt")));
+			BufferedReader reader = new BufferedReader(new FileReader(new File("StepsToOrigin.txt")));
 			String[] split = reader.readLine().split(" ");
 			for(int i = 0; i < LATTICE_SIZE; i++)
 			{
@@ -68,11 +68,6 @@ public class TaxiWalk
 				pattern.steps = start.pattern.steps;
 				pattern.length = (byte) (start.pattern.length + 1);
 				
-				System.out.println("Horizontal");
-				System.out.println(pattern);
-				System.out.println(approach(pattern));
-				
-				
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
@@ -96,7 +91,7 @@ public class TaxiWalk
 				{
 					// If cannot loop, chop off first step.
 					time = System.currentTimeMillis();
-					while(stepsToOrigin[(endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
+					while(stepsToOrigin[approach(pattern) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
 					{
 						if((pattern.steps & 1) == 0)
 						{
@@ -110,6 +105,14 @@ public class TaxiWalk
 						}
 						pattern.steps = pattern.steps >>> 1;
 						pattern.length--;
+						
+						if((pattern.steps & 1) == 1)
+						{
+							pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
+							int temp = endX;
+							endX = endY;
+							endY = temp;
+						}
 					}
 					
 					// If first step is now vertical, flip to horizontal. "ST" encoding faster?
@@ -145,11 +148,7 @@ public class TaxiWalk
 			{
 				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
 				pattern.length = (byte) (start.pattern.length + 1);
-				
-				System.out.println("Vertical");
-				System.out.println(pattern);
-				System.out.println(approach(pattern));
-				
+			
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
@@ -173,7 +172,7 @@ public class TaxiWalk
 				{
 					// If cannot loop, chop off first step.
 					time = System.currentTimeMillis();
-					while(stepsToOrigin[(endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
+					while(stepsToOrigin[approach(pattern) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
 					{
 						if((pattern.steps & 1) == 0)
 						{
@@ -187,6 +186,14 @@ public class TaxiWalk
 						}
 						pattern.steps = pattern.steps >>> 1;
 						pattern.length--;
+						
+						if((pattern.steps & 1) == 1)
+						{
+							pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
+							int temp = endX;
+							endX = endY;
+							endY = temp;
+						}
 					}
 					
 					// If first step is now vertical, flip to horizontal. "ST" encoding faster?
@@ -194,6 +201,7 @@ public class TaxiWalk
 					{
 						pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
 					}
+//					System.out.println("Reduced to: " + pattern);
 					reduce += System.currentTimeMillis() - time;
 					
 					
@@ -258,7 +266,7 @@ public class TaxiWalk
 	
 	public static int approach(Pattern pattern)
 	{
-		return (int) ((pattern.steps >>> (pattern.length - 2) & 1L) * 2 + (pattern.steps >>> (pattern.length - 1)));
+		return (int) ((pattern.steps >>> (pattern.length - 2) & 1) * 2 + (pattern.steps >>> (pattern.length - 1)));
 	}
 	
 	public static boolean hasLoop(Pattern pattern, int endX, int endY)

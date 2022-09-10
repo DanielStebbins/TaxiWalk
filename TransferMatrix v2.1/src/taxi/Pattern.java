@@ -26,9 +26,9 @@ public class Pattern implements Comparable<Pattern>
 	@Override
 	public String toString()
 	{
-		// Prints right to left, same way it's stored.
+		// Prints left to right, opposite of how it's stored.
 		String binaryString = "";
-		for(int i = length - 1; i >= 0; i--)
+		for(int i = 0; i < length; i++)
 		{
 			if(((steps >>> i) & 1L) == 1L)
 			{
