@@ -11,7 +11,7 @@ import java.util.LinkedList;
 public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
-	public static final int N = 43;
+	public static final int N = 12;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -58,6 +58,9 @@ public class TaxiWalk
 		while(!untreated.isEmpty())
 		{
 			State start = untreated.removeFirst();
+			
+			System.out.println(start);
+			System.out.println(approach(start.pattern));
 			
 			// Try to take a horizontal step.
 			if(start.pattern.length < 2 || start.pattern.steps >>> (start.pattern.length - 2) != 0b10)
@@ -145,7 +148,7 @@ public class TaxiWalk
 			{
 				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
 				pattern.length = (byte) (start.pattern.length + 1);
-				
+			
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
