@@ -11,7 +11,7 @@ import java.util.LinkedList;
 public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
-	public static final int N = 47;
+	public static final int N = 43;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -21,7 +21,6 @@ public class TaxiWalk
 	public static int[] stepsToOrigin = new int[LATTICE_SIZE];
 	
 	// Used for building the automaton.
-//	public static TreeMap<Pattern, State> automaton = new TreeMap<Pattern, State>();
 	public static State genesis = new State(new Pattern(0L, (byte) 0));
 	public static Automaton automaton = new Automaton(genesis);
 	public static LinkedList<State> untreated = new LinkedList<State>();
@@ -59,18 +58,12 @@ public class TaxiWalk
 		while(!untreated.isEmpty())
 		{
 			State start = untreated.removeFirst();
-//			System.out.println("\n" + start);
-//			System.out.println(approach(start.pattern));
 			
 			// Try to take a horizontal step.
 			if(start.pattern.length < 2 || start.pattern.steps >>> (start.pattern.length - 2) != 0b10)
 			{
 				pattern.steps = start.pattern.steps;
 				pattern.length = (byte) (start.pattern.length + 1);
-				
-//				System.out.println("Horizontal");
-//				System.out.println(pattern);
-//				System.out.println(approach(pattern));
 				
 				// Find end point.
 				long time = System.currentTimeMillis();
@@ -95,18 +88,6 @@ public class TaxiWalk
 				{
 					// If cannot loop, chop off first step.
 					time = System.currentTimeMillis();
-//					int approach = 0;
-//					if(pattern.length >= 2)
-//					{
-//						// Distances are stored with the final two steps left to right, but patterns are encoded right to left.
-////						System.out.println((start.pattern.steps >>> (start.pattern.length - 2) & 1L * 2));
-////						System.out.println((start.pattern.steps >>> (start.pattern.length - 1)));
-////						approach = (int) ((start.pattern.steps >>> (start.pattern.length - 2) & 1L * 2) + (start.pattern.steps >>> (start.pattern.length - 1)));
-//						approach = (int) (start.pattern.steps >>> (start.pattern.length - 2));
-//					}
-//					System.out.println(approach);
-//					System.out.println(endX + ", " + endY);
-//					System.out.println(approach(pattern));
 					while(stepsToOrigin[approach(pattern) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
 					{
 						if((pattern.steps & 1) == 0)
@@ -129,17 +110,6 @@ public class TaxiWalk
 							endX = endY;
 							endY = temp;
 						}
-						
-//						approach = 0;
-//						if(pattern.length >= 2)
-//						{
-////							approach = (int) ((start.pattern.steps >>> (start.pattern.length - 2) & 1L * 2) + (start.pattern.steps >>> (start.pattern.length - 1)));
-//							approach = (int) (start.pattern.steps >>> (start.pattern.length - 2));
-//						}
-						
-//						System.out.println(pattern);
-//						System.out.println(endX + ", " + endY);
-//						System.out.println(approach(pattern));
 					}
 					
 					// If first step is now vertical, flip to horizontal. "ST" encoding faster?
@@ -147,7 +117,6 @@ public class TaxiWalk
 					{
 						pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
 					}
-//					System.out.println("Reduced to: " + pattern);
 					reduce += System.currentTimeMillis() - time;
 					
 					
@@ -177,10 +146,6 @@ public class TaxiWalk
 				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
 				pattern.length = (byte) (start.pattern.length + 1);
 				
-//				System.out.println("Vertical");
-//				System.out.println(pattern);
-//				System.out.println(approach(pattern));
-				
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
@@ -204,14 +169,6 @@ public class TaxiWalk
 				{
 					// If cannot loop, chop off first step.
 					time = System.currentTimeMillis();
-//					int approach = 0;
-//					if(pattern.length >= 2)
-//					{
-//						// Distances are stored with the final two steps left to right, but patterns are encoded right to left.
-////						approach = (int) ((start.pattern.steps >>> (start.pattern.length - 2) & 1L * 2) + (start.pattern.steps >>> (start.pattern.length - 1)));
-//						approach = (int) (start.pattern.steps >>> (start.pattern.length - 2));
-//					}
-//					System.out.println(approach);
 					while(stepsToOrigin[approach(pattern) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > N - pattern.length)
 					{
 						if((pattern.steps & 1) == 0)
@@ -234,13 +191,6 @@ public class TaxiWalk
 							endX = endY;
 							endY = temp;
 						}
-						
-//						approach = 0;
-//						if(pattern.length >= 2)
-//						{
-////							approach = (int) ((start.pattern.steps >>> (start.pattern.length - 2) & 1L * 2) + (start.pattern.steps >>> (start.pattern.length - 1)));
-//							approach = (int) (start.pattern.steps >>> (start.pattern.length - 2));
-//						}
 					}
 					
 					// If first step is now vertical, flip to horizontal. "ST" encoding faster?
