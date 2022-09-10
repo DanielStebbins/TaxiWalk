@@ -30,7 +30,7 @@ public class Pattern implements Comparable<Pattern>
 		String binaryString = "";
 		for(int i = 0; i < length; i++)
 		{
-			if(((steps >>> i) & 1L) == 1L)
+			if(((steps >>> i) & 1) == 1)
 			{
 				binaryString += "V";
 			}

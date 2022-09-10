@@ -1,4 +1,4 @@
-// Record: N=47 in 20.7 seconds.
+// Record: N=47 in 12.7 seconds.
 
 package taxi;
 
@@ -11,7 +11,7 @@ import java.util.LinkedList;
 public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
-	public static final int N = 12;
+	public static final int N = 47;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -22,7 +22,7 @@ public class TaxiWalk
 	
 	// Used for building the automaton.
 	public static State genesis = new State(new Pattern(0L, (byte) 0));
-	public static Automaton automaton = new Automaton(genesis);
+	public static int count = 1;
 	public static LinkedList<State> untreated = new LinkedList<State>();
 	
 	public static long findEndpoint = 0;
@@ -59,11 +59,15 @@ public class TaxiWalk
 		{
 			State start = untreated.removeFirst();
 			
+//			System.out.println("\n" + start);
+			
 			// Try to take a horizontal step.
 			if(start.pattern.length < 2 || approach(start.pattern) != 1)
 			{
 				pattern.steps = start.pattern.steps;
 				pattern.length = (byte) (start.pattern.length + 1);
+				
+//				System.out.println("Horizontal: " + pattern);
 				
 				// Find end point.
 				long time = System.currentTimeMillis();
@@ -122,9 +126,10 @@ public class TaxiWalk
 					
 					time = System.currentTimeMillis();
 					end.pattern = new Pattern(pattern.steps, pattern.length);
-					State temp = automaton.putIfAbsent(end);
+					State temp = putIfAbsent(end);
 					if(temp == null)
 					{
+//						System.out.println("Added");
 						// Added to tree.
 						start.horizontal = end;
 						untreated.addLast(end);
@@ -132,6 +137,7 @@ public class TaxiWalk
 					}
 					else
 					{
+//						System.out.println("Present");
 						// Present in tree.
 						start.horizontal = temp;
 					}
@@ -145,6 +151,8 @@ public class TaxiWalk
 			{
 				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
 				pattern.length = (byte) (start.pattern.length + 1);
+				
+//				System.out.println("Vertical: " + pattern);
 			
 				// Find end point.
 				long time = System.currentTimeMillis();
@@ -204,10 +212,11 @@ public class TaxiWalk
 					
 					time = System.currentTimeMillis();
 					end.pattern = new Pattern(pattern.steps, pattern.length);
-					State temp = automaton.putIfAbsent(end);
+					State temp = putIfAbsent(end);
 					if(temp == null)
 					{
 						// Added to tree.
+//						System.out.println("Added");
 						start.vertical = end;
 						untreated.addLast(end);
 						end = new State(new Pattern(pattern.steps, pattern.length));
@@ -215,6 +224,7 @@ public class TaxiWalk
 					else
 					{
 						// Present in tree.		
+//						System.out.println("Present");
 						start.vertical = temp;
 					}
 					contains += System.currentTimeMillis() - time;
@@ -223,7 +233,7 @@ public class TaxiWalk
 		}
 		long endTime = System.currentTimeMillis();
 		System.out.println("N: " + N);
-		System.out.println("Automaton Size: " + automaton.size);
+		System.out.println("Automaton Size: " + count);
 		System.out.println("Total Time: " + (endTime - startTime) / 1000.0 + "\n");
 		
 		System.out.println("Find Endpoint: " + findEndpoint / 1000.0 + "(" + Math.round((double) findEndpoint / (endTime - startTime) * 1000) / 10.0 + "%)");
@@ -288,5 +298,52 @@ public class TaxiWalk
 		}
 		hasLoop += System.currentTimeMillis() - time;
 		return loop;
+	}
+	
+	public static State putIfAbsent(State s)
+	{
+		State parent = genesis;
+		for(int i = 0; i < s.pattern.length - 1; i++)
+		{
+			if(((s.pattern.steps >>> i) & 1) == 1)
+			{
+				parent = parent.vertical;
+			}
+			else
+			{
+				parent = parent.horizontal;
+			}
+		}
+		
+		if(((s.pattern.steps >>> (s.pattern.length - 1)) & 1) == 1)
+		{
+			if(parent.vertical == null)
+			{
+//				System.out.println("Adding");
+				count++;
+				parent.vertical = s;
+				return null;
+			}
+			else
+			{
+//				System.out.println("Present");
+				return parent.vertical;
+			}
+		}
+		else
+		{
+			if(parent.horizontal == null)
+			{
+//				System.out.println("Adding");
+				count++;
+				parent.horizontal = s;
+				return null;
+			}
+			else
+			{
+//				System.out.println("Present");
+				return parent.horizontal;
+			}
+		}
 	}
 }
