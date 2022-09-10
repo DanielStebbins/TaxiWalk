@@ -59,11 +59,8 @@ public class TaxiWalk
 		{
 			State start = untreated.removeFirst();
 			
-			System.out.println(start);
-			System.out.println(approach(start.pattern));
-			
 			// Try to take a horizontal step.
-			if(start.pattern.length < 2 || start.pattern.steps >>> (start.pattern.length - 2) != 0b10)
+			if(start.pattern.length < 2 || approach(start.pattern) != 1)
 			{
 				pattern.steps = start.pattern.steps;
 				pattern.length = (byte) (start.pattern.length + 1);
@@ -144,7 +141,7 @@ public class TaxiWalk
 			
 			
 			// Try to take a vertical step.
-			if(start.pattern.length < 2 || start.pattern.steps >>> (start.pattern.length - 2) != 0b01)
+			if(start.pattern.length < 2 || approach(start.pattern) != 2)
 			{
 				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
 				pattern.length = (byte) (start.pattern.length + 1);
