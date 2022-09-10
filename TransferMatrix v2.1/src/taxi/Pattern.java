@@ -26,6 +26,19 @@ public class Pattern implements Comparable<Pattern>
 	@Override
 	public String toString()
 	{
-		return "Length: " + length + ", " + Long.toBinaryString(steps);
+		// Prints right to left, same way it's stored.
+		String binaryString = "";
+		for(int i = length - 1; i >= 0; i--)
+		{
+			if(((steps >>> i) & 1L) == 1L)
+			{
+				binaryString += "V";
+			}
+			else
+			{
+				binaryString += "H";
+			}
+		}
+		return "Length: " + length + ", " + binaryString;
 	}
 }

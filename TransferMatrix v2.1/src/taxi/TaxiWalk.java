@@ -68,6 +68,10 @@ public class TaxiWalk
 				pattern.steps = start.pattern.steps;
 				pattern.length = (byte) (start.pattern.length + 1);
 				
+				System.out.println("Horizontal");
+				System.out.println(pattern);
+				System.out.println(approach(pattern));
+				
 				
 				// Find end point.
 				long time = System.currentTimeMillis();
@@ -142,6 +146,9 @@ public class TaxiWalk
 				pattern.steps = start.pattern.steps | (1L << start.pattern.length);
 				pattern.length = (byte) (start.pattern.length + 1);
 				
+				System.out.println("Vertical");
+				System.out.println(pattern);
+				System.out.println(approach(pattern));
 				
 				// Find end point.
 				long time = System.currentTimeMillis();
@@ -251,7 +258,7 @@ public class TaxiWalk
 	
 	public static int approach(Pattern pattern)
 	{
-		return (int) (pattern.steps >>> (pattern.length - 2));
+		return (int) ((pattern.steps >>> (pattern.length - 2) & 1L) * 2 + (pattern.steps >>> (pattern.length - 1)));
 	}
 	
 	public static boolean hasLoop(Pattern pattern, int endX, int endY)
