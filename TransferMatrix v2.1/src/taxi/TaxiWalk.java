@@ -1,4 +1,4 @@
-// Record: N=47 in 10.18 seconds.
+// Record: N=47 in 10.11 seconds.
 
 package taxi;
 
@@ -11,7 +11,7 @@ import java.util.LinkedList;
 public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
-	public static final int N = 63;
+	public static final int N = 47;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -49,7 +49,7 @@ public class TaxiWalk
 			e.printStackTrace();
 		}
 		
-		for(int n = 15; n <= N; n += 4)
+		for(int n = 47; n <= N; n += 4)
 		{
 			long startTime = System.currentTimeMillis();
 			
