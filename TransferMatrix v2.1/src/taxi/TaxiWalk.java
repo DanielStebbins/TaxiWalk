@@ -24,6 +24,7 @@ public class TaxiWalk
 	public static State genesis = new State(new Pattern(0L, (byte) 0));
 	public static int count = 1;
 	public static LinkedList<State> untreated = new LinkedList<State>();
+	public static int[] point = new int[2];
 	
 	public static long findEndpoint = 0;
 	public static long hasLoop = 0;
@@ -72,16 +73,20 @@ public class TaxiWalk
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
+				int xStep = 1;
 				int endY = 0;
+				int yStep = 1;
 				for(int i = 0; i < pattern.length; i++)
 				{
 					if((pattern.steps >>> i & 1) == 0)
 					{	
-						endX += 1 - 2 * Math.abs(endY % 2);		
+						endX += xStep;
+						yStep = -yStep;
 					}
 					else
 					{
-						endY += 1 - 2 * Math.abs(endX % 2);
+						endY += yStep;
+						xStep = -xStep;
 					}
 				}
 				findEndpoint += System.currentTimeMillis() - time;
@@ -157,16 +162,20 @@ public class TaxiWalk
 				// Find end point.
 				long time = System.currentTimeMillis();
 				int endX = 0;
+				int xStep = 1;
 				int endY = 0;
+				int yStep = 1;
 				for(int i = 0; i < pattern.length; i++)
 				{
 					if((pattern.steps >>> i & 1) == 0)
 					{	
-						endX += 1 - 2 * Math.abs(endY % 2);
+						endX += xStep;
+						yStep = -yStep;
 					}
 					else
 					{
-						endY += 1 - 2 * Math.abs(endX % 2);
+						endY += yStep;
+						xStep = -xStep;
 					}
 				}
 				findEndpoint += System.currentTimeMillis() - time;
@@ -280,18 +289,22 @@ public class TaxiWalk
 	{
 		long time = System.currentTimeMillis();
 		int x = 0;
+		int xStep = 1;
 		int y = 0;
+		int yStep = 1;
 		boolean loop = x == endX && y == endY;
 		int i = 0;
 		while(!loop && i < pattern.length - 12)
 		{					
-			if((pattern.steps & (1L << i)) == 0)
-			{
-				x += 1 - 2 * Math.abs(y % 2);
+			if((pattern.steps >>> i & 1) == 0)
+			{	
+				x += xStep;
+				yStep = -yStep;
 			}
 			else
 			{
-				y += 1 - 2 * Math.abs(x % 2);
+				y += yStep;
+				xStep = -xStep;
 			}
 			loop = x == endX && y == endY;
 			i++;
