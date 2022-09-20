@@ -1,4 +1,4 @@
-// Record: N=47 in 10.11 seconds.
+// Record: N=47 in 9.8 seconds.
 
 package taxi;
 
@@ -49,7 +49,7 @@ public class TaxiWalk
 			e.printStackTrace();
 		}
 		
-		for(int n = 47; n <= N; n += 4)
+		for(int n = 15; n <= N; n += 4)
 		{
 			long startTime = System.currentTimeMillis();
 			
@@ -62,6 +62,8 @@ public class TaxiWalk
 			while(!untreated.isEmpty())
 			{
 				State start = untreated.removeFirst();
+				
+				
 				
 	//			System.out.println("\n" + start);
 				
@@ -213,7 +215,7 @@ public class TaxiWalk
 							}
 						}
 						
-						// If first step is now vertical, flip to horizontal. "ST" encoding faster?
+						// If first step is now vertical, flip to horizontal.
 						if((pattern.steps & 1) == 1)
 						{
 							pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
@@ -293,6 +295,12 @@ public class TaxiWalk
 			genesis = new State(new Pattern(0L, (byte) 0));
 			count = 0;
 			untreated.clear();
+			
+			findEndpoint = 0;
+			hasLoop = 0;
+			reduce = 0;
+			contains = 0;
+			treePruning = 0;
 		}
 	}
 	
