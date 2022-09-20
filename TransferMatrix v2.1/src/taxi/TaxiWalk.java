@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.TreeMap;
 
 public class TaxiWalk
 {
@@ -264,33 +265,34 @@ public class TaxiWalk
 			System.out.println("Tree Pruning: " + treePruning / 1000.0 + "(" + Math.round((double) treePruning / (endTime - startTime) * 1000) / 10.0 + "%)");
 			
 			// Running the automaton.
-	//		TreeMap<State, Integer> current = new TreeMap<State, Integer>();
-	//		TreeMap<State, Integer> next = new TreeMap<State, Integer>();
-	//		current.put(genesis, 1);
-	//		for(int i = 1; i <= N; i++)
-	//		{
-	//			for(State start : current.keySet())
-	//			{
-	//				if(start.horizontal != null)
-	//				{
-	//					next.put(start.horizontal, next.getOrDefault(start.horizontal, 0) + current.get(start));
-	//				}
-	//				
-	//				if(start.vertical != null)
-	//				{
-	//					next.put(start.vertical, next.getOrDefault(start.vertical, 0) + current.get(start));
-	//				}
-	//			}
-	//			current = next;
-	//			next = new TreeMap<State, Integer>();
-	//		}
-	//
-	//		long cate s : current.keySet())
-	//		{
-	//			count += current.get(s);
-	//		}ount = 0;
-	//		for(St
-	//		System.out.println("\n" + count);
+			TreeMap<State, Integer> current = new TreeMap<State, Integer>();
+			TreeMap<State, Integer> next = new TreeMap<State, Integer>();
+			current.put(genesis, 1);
+			for(int i = 1; i <= N; i++)
+			{
+				for(State start : current.keySet())
+				{
+					if(start.horizontal != null)
+					{
+						next.put(start.horizontal, next.getOrDefault(start.horizontal, 0) + current.get(start));
+					}
+					
+					if(start.vertical != null)
+					{
+						next.put(start.vertical, next.getOrDefault(start.vertical, 0) + current.get(start));
+					}
+				}
+				current = next;
+				next = new TreeMap<State, Integer>();
+			}
+	
+			long count = 0;
+			for(State s : current.keySet())
+			{
+				count += current.get(s);
+			}
+			
+			System.out.println("\n" + count);
 			
 			genesis = new State(new Pattern(0L, (byte) 0));
 			count = 0;
