@@ -1,25 +1,34 @@
 package taxi;
 
-public class State implements Comparable<State>
+public class State
 {
-	public Pattern pattern;
+	public long steps;
+	public byte length;
 	public State horizontal;
 	public State vertical;
 	
-	public State(Pattern pattern)
+	public State(long steps, byte length)
 	{
-		this.pattern = pattern;
-	}
-
-	@Override
-	public int compareTo(State o)
-	{
-		return pattern.compareTo(o.pattern);
+		this.steps = steps;
+		this.length = length;
 	}
 	
 	@Override
 	public String toString()
 	{
-		return "\"" + pattern + "\"";
+		// Prints left to right, opposite of how it's stored.
+		String binaryString = "";
+		for(int i = 0; i < length; i++)
+		{
+			if(((steps >>> i) & 1) == 1)
+			{
+				binaryString += "V";
+			}
+			else
+			{
+				binaryString += "H";
+			}
+		}
+		return "Length: " + length + ", " + binaryString;
 	}
 }

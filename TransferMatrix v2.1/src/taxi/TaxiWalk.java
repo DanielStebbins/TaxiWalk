@@ -1,4 +1,5 @@
-// Record: N=47 in 9.8 seconds.
+// Record: N=47 in 7.8 seconds.
+// Record: N=51 in 58 seconds.
 
 package taxi;
 
@@ -12,7 +13,8 @@ import java.util.TreeMap;
 public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
-	public static final int N = 19;
+
+	public static final int N = 51;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -22,8 +24,8 @@ public class TaxiWalk
 	public static int[] stepsToOrigin = new int[LATTICE_SIZE];
 	
 	// Used for building the automaton.
-	public static State genesis = new State(new Pattern(0L, (byte) 0));
-	public static State twoNullPointers = new State(new Pattern(0L, (byte) 0));
+	public static State genesis = new State(0L, (byte) 0);
+	public static State twoNullPointers = new State(0L, (byte) 0);
 	public static int count = 1;
 	public static LinkedList<State> untreated = new LinkedList<State>();
 	
@@ -58,8 +60,9 @@ public class TaxiWalk
 			untreated.addLast(genesis);
 			
 			// Main automaton-generating code.
-			Pattern pattern = new Pattern(0L, (byte) 0);
-			State end = new State(pattern);
+			long steps = 0L;
+			byte length = 0;
+			State end = new State(steps, length);
 			while(!untreated.isEmpty())
 			{
 				State start = untreated.removeFirst();
@@ -69,10 +72,10 @@ public class TaxiWalk
 	//			System.out.println("\n" + start);
 				
 				// Try to take a horizontal step.
-				if(start.pattern.length < 2 || approach(start.pattern) != 1)
+				if(start.length < 2 || approach(start.steps, start.length) != 1)
 				{
-					pattern.steps = start.pattern.steps;
-					pattern.length = (byte) (start.pattern.length + 1);
+					steps = start.steps;
+					length = (byte) (start.length + 1);
 					
 	//				System.out.println("Horizontal: " + pattern);
 					
@@ -82,9 +85,9 @@ public class TaxiWalk
 					int xStep = 1;
 					int endY = 0;
 					int yStep = 1;
-					for(int i = 0; i < pattern.length; i++)
+					for(int i = 0; i < length; i++)
 					{
-						if((pattern.steps >>> i & 1) == 0)
+						if((steps >>> i & 1) == 0)
 						{	
 							endX += xStep;
 							yStep = -yStep;
@@ -99,13 +102,13 @@ public class TaxiWalk
 					
 					
 					// Check for loop.		
-					if(!hasLoop(pattern, endX, endY))
+					if(!hasLoop(steps, length, endX, endY))
 					{
 						// If cannot loop, chop off first step.
 						time = System.currentTimeMillis();
-						while(stepsToOrigin[approach(pattern) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > n - pattern.length)
+						while(stepsToOrigin[approach(steps, length) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > n - length)
 						{
-							if((pattern.steps & 1) == 0)
+							if((steps & 1) == 0)
 							{
 								endX -= 1;
 								endY = -endY;
@@ -115,12 +118,12 @@ public class TaxiWalk
 								endX = -endX;
 								endY -= 1;
 							}
-							pattern.steps = pattern.steps >>> 1;
-							pattern.length--;
+							steps = steps >>> 1;
+							length--;
 							
-							if((pattern.steps & 1) == 1)
+							if((steps & 1) == 1)
 							{
-								pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
+								steps = steps ^ ((1L << length) - 1);
 								int temp = endX;
 								endX = endY;
 								endY = temp;
@@ -128,15 +131,16 @@ public class TaxiWalk
 						}
 						
 						// If first step is now vertical, flip to horizontal. "ST" encoding faster?
-						if((pattern.steps & 1) == 1)
+						if((steps & 1) == 1)
 						{
-							pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
+							steps = steps ^ ((1L << length) - 1);
 						}
 						reduce += System.currentTimeMillis() - time;
 						
 						
 						time = System.currentTimeMillis();
-						end.pattern = new Pattern(pattern.steps, pattern.length);
+						end.steps = steps;
+						end.length = length;
 						State temp = putIfAbsent(end);
 						if(temp == null)
 						{
@@ -144,7 +148,7 @@ public class TaxiWalk
 							// Added to tree.
 							start.horizontal = end;
 							untreated.addLast(end);
-							end = new State(new Pattern(pattern.steps, pattern.length));
+							end = new State(steps, length);
 						}
 						else
 						{
@@ -158,10 +162,10 @@ public class TaxiWalk
 				
 				
 				// Try to take a vertical step.
-				if(start.pattern.length < 2 || approach(start.pattern) != 2)
+				if(start.length < 2 || approach(start.steps, start.length) != 2)
 				{
-					pattern.steps = start.pattern.steps | (1L << start.pattern.length);
-					pattern.length = (byte) (start.pattern.length + 1);
+					steps = start.steps | (1L << start.length);
+					length = (byte) (start.length + 1);
 					
 	//				System.out.println("Vertical: " + pattern);
 				
@@ -171,9 +175,9 @@ public class TaxiWalk
 					int xStep = 1;
 					int endY = 0;
 					int yStep = 1;
-					for(int i = 0; i < pattern.length; i++)
+					for(int i = 0; i < length; i++)
 					{
-						if((pattern.steps >>> i & 1) == 0)
+						if((steps >>> i & 1) == 0)
 						{	
 							endX += xStep;
 							yStep = -yStep;
@@ -188,13 +192,13 @@ public class TaxiWalk
 					
 					
 					// Check for loop.		
-					if(!hasLoop(pattern, endX, endY))
+					if(!hasLoop(steps, length, endX, endY))
 					{
 						// If cannot loop, chop off first step.
 						time = System.currentTimeMillis();
-						while(stepsToOrigin[approach(pattern) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > n - pattern.length)
+						while(stepsToOrigin[approach(steps, length) * OFFSET + (endX + MAX_N) * DIM + endY + MAX_N] > n - length)
 						{
-							if((pattern.steps & 1) == 0)
+							if((steps & 1) == 0)
 							{
 								endX -= 1;
 								endY = -endY;
@@ -204,12 +208,12 @@ public class TaxiWalk
 								endX = -endX;
 								endY -= 1;
 							}
-							pattern.steps = pattern.steps >>> 1;
-							pattern.length--;
+							steps = steps >>> 1;
+							length--;
 							
-							if((pattern.steps & 1) == 1)
+							if((steps & 1) == 1)
 							{
-								pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
+								steps = steps ^ ((1L << length) - 1);
 								int temp = endX;
 								endX = endY;
 								endY = temp;
@@ -217,16 +221,17 @@ public class TaxiWalk
 						}
 						
 						// If first step is now vertical, flip to horizontal.
-						if((pattern.steps & 1) == 1)
+						if((steps & 1) == 1)
 						{
-							pattern.steps = pattern.steps ^ ((1L << pattern.length) - 1);
+							steps = steps ^ ((1L << length) - 1);
 						}
 	//					System.out.println("Reduced to: " + pattern);
 						reduce += System.currentTimeMillis() - time;
 						
 						
 						time = System.currentTimeMillis();
-						end.pattern = new Pattern(pattern.steps, pattern.length);
+						end.steps = steps;
+						end.length = length;
 						State temp = putIfAbsent(end);
 						if(temp == null)
 						{
@@ -234,7 +239,7 @@ public class TaxiWalk
 	//						System.out.println("Added");
 							start.vertical = end;
 							untreated.addLast(end);
-							end = new State(new Pattern(pattern.steps, pattern.length));
+							end = new State(steps, length);
 						}
 						else
 						{
@@ -265,35 +270,35 @@ public class TaxiWalk
 			System.out.println("Tree Pruning: " + treePruning / 1000.0 + "(" + Math.round((double) treePruning / (endTime - startTime) * 1000) / 10.0 + "%)");
 			
 			// Running the automaton.
-			TreeMap<State, Integer> current = new TreeMap<State, Integer>();
-			TreeMap<State, Integer> next = new TreeMap<State, Integer>();
-			current.put(genesis, 1);
-			for(int i = 1; i <= n; i++)
-			{
-				for(State start : current.keySet())
-				{
-					if(start.horizontal != null)
-					{
-						next.put(start.horizontal, next.getOrDefault(start.horizontal, 0) + current.get(start));
-					}
-					
-					if(start.vertical != null)
-					{
-						next.put(start.vertical, next.getOrDefault(start.vertical, 0) + current.get(start));
-					}
-				}
-				current = next;
-				next = new TreeMap<State, Integer>();
-			}
-	
-			long taxi = 0;
-			for(State s : current.keySet())
-			{
-				taxi += current.get(s);
-			}
-			System.out.println("\n" + taxi);
+//			TreeMap<State, Integer> current = new TreeMap<State, Integer>();
+//			TreeMap<State, Integer> next = new TreeMap<State, Integer>();
+//			current.put(genesis, 1);
+//			for(int i = 1; i <= n; i++)
+//			{
+//				for(State start : current.keySet())
+//				{
+//					if(start.horizontal != null)
+//					{
+//						next.put(start.horizontal, next.getOrDefault(start.horizontal, 0) + current.get(start));
+//					}
+//					
+//					if(start.vertical != null)
+//					{
+//						next.put(start.vertical, next.getOrDefault(start.vertical, 0) + current.get(start));
+//					}
+//				}
+//				current = next;
+//				next = new TreeMap<State, Integer>();
+//			}
+//	
+//			long taxi = 0;
+//			for(State s : current.keySet())
+//			{
+//				taxi += current.get(s);
+//			}
+//			System.out.println("\n" + taxi);
 			
-			genesis = new State(new Pattern(0L, (byte) 0));
+			genesis = new State(0L, (byte) 0);
 			count = 0;
 			untreated.clear();
 			
@@ -319,12 +324,12 @@ public class TaxiWalk
 		}
 	}
 	
-	public static int approach(Pattern pattern)
+	public static int approach(long steps, byte length)
 	{
-		return (int) ((pattern.steps >>> (pattern.length - 2) & 1) * 2 + (pattern.steps >>> (pattern.length - 1)));
+		return (int) ((steps >>> (length - 2) & 1) * 2 + (steps >>> (length - 1)));
 	}
 	
-	public static boolean hasLoop(Pattern pattern, int endX, int endY)
+	public static boolean hasLoop(long steps, byte length, int endX, int endY)
 	{
 		long time = System.currentTimeMillis();
 		int x = 0;
@@ -333,9 +338,9 @@ public class TaxiWalk
 		int yStep = 1;
 		boolean loop = x == endX && y == endY;
 		int i = 0;
-		while(!loop && i < pattern.length - 12)
+		while(!loop && i < length - 12)
 		{					
-			if((pattern.steps >>> i & 1) == 0)
+			if((steps >>> i & 1) == 0)
 			{	
 				x += xStep;
 				yStep = -yStep;
@@ -355,9 +360,9 @@ public class TaxiWalk
 	public static State putIfAbsent(State s)
 	{
 		State parent = genesis;
-		for(int i = 0; i < s.pattern.length - 1; i++)
+		for(int i = 0; i < s.length - 1; i++)
 		{
-			if(((s.pattern.steps >>> i) & 1) == 1)
+			if(((s.steps >>> i) & 1) == 1)
 			{
 				parent = parent.vertical;
 			}
@@ -367,7 +372,7 @@ public class TaxiWalk
 			}
 		}
 		
-		if(((s.pattern.steps >>> (s.pattern.length - 1)) & 1) == 1)
+		if(((s.steps >>> (s.length - 1)) & 1) == 1)
 		{
 			if(parent.vertical == null)
 			{
