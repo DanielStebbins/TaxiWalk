@@ -1,4 +1,4 @@
-// Record: N=47 in 9.5 seconds.
+// Record: N=47 in 7.8 seconds.
 
 package taxi;
 
@@ -22,8 +22,8 @@ public class TaxiWalk
 	public static int[] stepsToOrigin = new int[LATTICE_SIZE];
 	
 	// Used for building the automaton.
-	public static State genesis = new State(new Pattern(0L, (byte) 0));
-	public static State twoNullPointers = new State(new Pattern(0L, (byte) 0));
+	public static State genesis = new State(0L, (byte) 0);
+	public static State twoNullPointers = new State(0L, (byte) 0);
 	public static int count = 1;
 	public static LinkedList<State> untreated = new LinkedList<State>();
 	
@@ -60,7 +60,7 @@ public class TaxiWalk
 			// Main automaton-generating code.
 			long steps = 0L;
 			byte length = 0;
-			State end = new State(new Pattern(steps, length));
+			State end = new State(steps, length);
 			while(!untreated.isEmpty())
 			{
 				State start = untreated.removeFirst();
@@ -70,10 +70,10 @@ public class TaxiWalk
 	//			System.out.println("\n" + start);
 				
 				// Try to take a horizontal step.
-				if(start.pattern.length < 2 || approach(start.pattern.steps, start.pattern.length) != 1)
+				if(start.length < 2 || approach(start.steps, start.length) != 1)
 				{
-					steps = start.pattern.steps;
-					length = (byte) (start.pattern.length + 1);
+					steps = start.steps;
+					length = (byte) (start.length + 1);
 					
 	//				System.out.println("Horizontal: " + pattern);
 					
@@ -137,7 +137,8 @@ public class TaxiWalk
 						
 						
 						time = System.currentTimeMillis();
-						end.pattern = new Pattern(steps, length);
+						end.steps = steps;
+						end.length = length;
 						State temp = putIfAbsent(end);
 						if(temp == null)
 						{
@@ -145,7 +146,7 @@ public class TaxiWalk
 							// Added to tree.
 							start.horizontal = end;
 							untreated.addLast(end);
-							end = new State(new Pattern(steps, length));
+							end = new State(steps, length);
 						}
 						else
 						{
@@ -159,10 +160,10 @@ public class TaxiWalk
 				
 				
 				// Try to take a vertical step.
-				if(start.pattern.length < 2 || approach(start.pattern.steps, start.pattern.length) != 2)
+				if(start.length < 2 || approach(start.steps, start.length) != 2)
 				{
-					steps = start.pattern.steps | (1L << start.pattern.length);
-					length = (byte) (start.pattern.length + 1);
+					steps = start.steps | (1L << start.length);
+					length = (byte) (start.length + 1);
 					
 	//				System.out.println("Vertical: " + pattern);
 				
@@ -227,7 +228,8 @@ public class TaxiWalk
 						
 						
 						time = System.currentTimeMillis();
-						end.pattern = new Pattern(steps, length);
+						end.steps = steps;
+						end.length = length;
 						State temp = putIfAbsent(end);
 						if(temp == null)
 						{
@@ -235,7 +237,7 @@ public class TaxiWalk
 	//						System.out.println("Added");
 							start.vertical = end;
 							untreated.addLast(end);
-							end = new State(new Pattern(steps, length));
+							end = new State(steps, length);
 						}
 						else
 						{
@@ -294,7 +296,7 @@ public class TaxiWalk
 			}
 			System.out.println("\n" + taxi);
 			
-			genesis = new State(new Pattern(0L, (byte) 0));
+			genesis = new State(0L, (byte) 0);
 			count = 0;
 			untreated.clear();
 			
@@ -356,9 +358,9 @@ public class TaxiWalk
 	public static State putIfAbsent(State s)
 	{
 		State parent = genesis;
-		for(int i = 0; i < s.pattern.length - 1; i++)
+		for(int i = 0; i < s.length - 1; i++)
 		{
-			if(((s.pattern.steps >>> i) & 1) == 1)
+			if(((s.steps >>> i) & 1) == 1)
 			{
 				parent = parent.vertical;
 			}
@@ -368,7 +370,7 @@ public class TaxiWalk
 			}
 		}
 		
-		if(((s.pattern.steps >>> (s.pattern.length - 1)) & 1) == 1)
+		if(((s.steps >>> (s.length - 1)) & 1) == 1)
 		{
 			if(parent.vertical == null)
 			{
