@@ -14,13 +14,14 @@ public class State implements Comparable<State>
 	}
 	
 	@Override
-	public int compareTo(State other)
+	public int compareTo(State o)
 	{
-		if(length != other.length)
+		if(length != o.length)
 		{
-			return length - other.length;
+			return length - o.length;
 		}
-		return 
+		// Stolen from Java Long.
+		return (steps < o.steps) ? -1 : ((steps == o.steps) ? 0 : 1);
 	}
 	
 	@Override
