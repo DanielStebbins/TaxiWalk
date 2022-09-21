@@ -249,13 +249,14 @@ public class TaxiWalk
 						contains += System.currentTimeMillis() - time;
 					}
 				}
-				long time = System.currentTimeMillis();
-				if(start.horizontal == null && start.vertical == null)
-				{
-					start = twoNullPointers;
-					count--;
-				}
-				treePruning += System.currentTimeMillis() - time;
+				
+//				long time = System.currentTimeMillis();
+//				if(start.horizontal == null && start.vertical == null)
+//				{
+//					start = twoNullPointers;
+//					count--;
+//				}
+//				treePruning += System.currentTimeMillis() - time;
 			}
 			long endTime = System.currentTimeMillis();
 			System.out.println("\nN: " + n);
