@@ -1,6 +1,6 @@
 package taxi;
 
-public class State
+public class State implements Comparable<State>
 {
 	public long steps;
 	public byte length;
@@ -11,6 +11,16 @@ public class State
 	{
 		this.steps = steps;
 		this.length = length;
+	}
+	
+	@Override
+	public int compareTo(State other)
+	{
+		if(length != other.length)
+		{
+			return length - other.length;
+		}
+		return 
 	}
 	
 	@Override

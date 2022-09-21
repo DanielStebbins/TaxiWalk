@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.TreeMap;
 
 public class TaxiWalk
 {
@@ -32,7 +33,8 @@ public class TaxiWalk
 	public static long hasLoop = 0;
 	public static long reduce = 0;
 	public static long contains = 0;
-	public static long treePruning = 0;
+//	public static long treePruning = 0;
+	public static long runAutomaton = 0;
 	
 	public static void main(String args[])
 	{
@@ -258,45 +260,53 @@ public class TaxiWalk
 //				}
 //				treePruning += System.currentTimeMillis() - time;
 			}
+			
+			
+			// Running the automaton.
+			long time = System.currentTimeMillis();
+			TreeMap<State, Integer> current = new TreeMap<State, Integer>();
+			TreeMap<State, Integer> next = new TreeMap<State, Integer>();
+			current.put(genesis, 1);
+			for(int i = 1; i <= n; i++)
+			{
+				for(State start : current.keySet())
+				{
+					if(start.horizontal != null)
+					{
+						next.put(start.horizontal, next.getOrDefault(start.horizontal, 0) + current.get(start));
+					}
+					
+					if(start.vertical != null)
+					{
+						next.put(start.vertical, next.getOrDefault(start.vertical, 0) + current.get(start));
+					}
+				}
+				current = next;
+				next = new TreeMap<State, Integer>();
+			}
+	
+			long taxi = 0;
+			for(State s : current.keySet())
+			{
+				taxi += current.get(s);
+			}
+			runAutomaton = System.currentTimeMillis() - time;
+			
+			
+			// Output Statistics.
 			long endTime = System.currentTimeMillis();
 			System.out.println("\nN: " + n);
 			System.out.println("Automaton Size: " + count);
+			System.out.println("Number of Taxi Walks: " + taxi);
 			System.out.println("Total Time: " + (endTime - startTime) / 1000.0 + "\n");
 			
 			System.out.println("Find Endpoint: " + findEndpoint / 1000.0 + "(" + Math.round((double) findEndpoint / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Has Loop: " + hasLoop / 1000.0 + "(" + Math.round((double) hasLoop / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Reduce Pattern: " + reduce / 1000.0 + "(" + Math.round((double) reduce / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Tree Contains: " + contains / 1000.0 + "(" + Math.round((double) contains / (endTime - startTime) * 1000) / 10.0 + "%)");
-			System.out.println("Tree Pruning: " + treePruning / 1000.0 + "(" + Math.round((double) treePruning / (endTime - startTime) * 1000) / 10.0 + "%)");
+//			System.out.println("Tree Pruning: " + treePruning / 1000.0 + "(" + Math.round((double) treePruning / (endTime - startTime) * 1000) / 10.0 + "%)");
+			System.out.println("Running the Automaton: " + runAutomaton / 1000.0 + "(" + Math.round((double) runAutomaton / (endTime - startTime) * 1000) / 10.0 + "%)");
 			
-			// Running the automaton.
-//			TreeMap<State, Integer> current = new TreeMap<State, Integer>();
-//			TreeMap<State, Integer> next = new TreeMap<State, Integer>();
-//			current.put(genesis, 1);
-//			for(int i = 1; i <= n; i++)
-//			{
-//				for(State start : current.keySet())
-//				{
-//					if(start.horizontal != null)
-//					{
-//						next.put(start.horizontal, next.getOrDefault(start.horizontal, 0) + current.get(start));
-//					}
-//					
-//					if(start.vertical != null)
-//					{
-//						next.put(start.vertical, next.getOrDefault(start.vertical, 0) + current.get(start));
-//					}
-//				}
-//				current = next;
-//				next = new TreeMap<State, Integer>();
-//			}
-//	
-//			long taxi = 0;
-//			for(State s : current.keySet())
-//			{
-//				taxi += current.get(s);
-//			}
-//			System.out.println("\n" + taxi);
 			
 			genesis = new State(0L, (byte) 0);
 			count = 0;
@@ -306,7 +316,8 @@ public class TaxiWalk
 			hasLoop = 0;
 			reduce = 0;
 			contains = 0;
-			treePruning = 0;
+//			treePruning = 0;
+			runAutomaton = 0;
 		}
 	}
 	
