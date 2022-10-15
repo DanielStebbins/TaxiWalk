@@ -6,6 +6,7 @@ public class State implements Comparable<State>
 	public byte length;
 	public State horizontal;
 	public State vertical;
+	public int index;
 	
 	public State(long steps, byte length)
 	{

@@ -8,7 +8,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.LinkedList;
-import java.util.TreeMap;
 
 public class TaxiWalk
 {
@@ -59,6 +58,7 @@ public class TaxiWalk
 			
 			// Set up the automaton stuff.
 			untreated.addLast(genesis);
+			int count = 0;
 			
 			// Main automaton-generating code.
 			long steps = 0L;
@@ -67,7 +67,8 @@ public class TaxiWalk
 			while(!untreated.isEmpty())
 			{
 				State start = untreated.removeFirst();
-				
+				start.index = count;
+				count++;
 				
 				
 	//			System.out.println("\n" + start);
@@ -264,31 +265,48 @@ public class TaxiWalk
 			
 			// Running the automaton.
 			long time = System.currentTimeMillis();
-			TreeMap<State, Integer> current = new TreeMap<State, Integer>();
-			TreeMap<State, Integer> next = new TreeMap<State, Integer>();
-			current.put(genesis, 1);
+			LinkedList<State> current = new LinkedList<State>();
+			LinkedList<State> next = new LinkedList<State>();
+			int[] currentCounts = new int[count];
+			int[] nextCounts = new int[count];
+			
+			currentCounts[genesis.index] = 1;
+			current.addLast(genesis);
+			
 			for(int i = 1; i <= n; i++)
 			{
-				for(State start : current.keySet())
+				while(!current.isEmpty())
 				{
+					State start = current.removeFirst();
 					if(start.horizontal != null)
 					{
-						next.put(start.horizontal, next.getOrDefault(start.horizontal, 0) + current.get(start));
+						if(nextCounts[start.horizontal.index] == 0)
+						{
+							next.addLast(start.horizontal);
+						}
+						nextCounts[start.horizontal.index] += currentCounts[start.index];
 					}
 					
 					if(start.vertical != null)
 					{
-						next.put(start.vertical, next.getOrDefault(start.vertical, 0) + current.get(start));
+						if(nextCounts[start.vertical.index] == 0)
+						{
+							next.addLast(start.vertical);
+						}
+						nextCounts[start.vertical.index] += currentCounts[start.index];
 					}
 				}
 				current = next;
-				next = new TreeMap<State, Integer>();
+				next = new LinkedList<State>();
+				
+				currentCounts = nextCounts;
+				nextCounts = new int[count];
 			}
 	
 			long taxi = 0;
-			for(State s : current.keySet())
+			while(!current.isEmpty())
 			{
-				taxi += current.get(s);
+				taxi += currentCounts[current.removeFirst().index];
 			}
 			runAutomaton = System.currentTimeMillis() - time;
 			
