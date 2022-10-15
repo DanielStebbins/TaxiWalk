@@ -32,7 +32,6 @@ public class TaxiWalk
 	public static long hasLoop = 0;
 	public static long reduce = 0;
 	public static long contains = 0;
-//	public static long treePruning = 0;
 	public static long runAutomaton = 0;
 	
 	public static void main(String args[])
@@ -69,17 +68,12 @@ public class TaxiWalk
 				State start = untreated.removeFirst();
 				start.index = count;
 				count++;
-				
-				
-	//			System.out.println("\n" + start);
-				
+	
 				// Try to take a horizontal step.
 				if(start.length < 2 || approach(start.steps, start.length) != 1)
 				{
 					steps = start.steps;
 					length = (byte) (start.length + 1);
-					
-	//				System.out.println("Horizontal: " + pattern);
 					
 					// Find end point.
 					long time = System.currentTimeMillis();
@@ -132,7 +126,7 @@ public class TaxiWalk
 							}
 						}
 						
-						// If first step is now vertical, flip to horizontal. "ST" encoding faster?
+						// If first step is now vertical, flip to horizontal.
 						if((steps & 1) == 1)
 						{
 							steps = steps ^ ((1L << length) - 1);
@@ -146,7 +140,6 @@ public class TaxiWalk
 						State temp = putIfAbsent(end);
 						if(temp == null)
 						{
-	//						System.out.println("Added");
 							// Added to tree.
 							start.horizontal = end;
 							untreated.addLast(end);
@@ -154,7 +147,6 @@ public class TaxiWalk
 						}
 						else
 						{
-	//						System.out.println("Present");
 							// Present in tree.
 							start.horizontal = temp;
 						}
@@ -168,8 +160,6 @@ public class TaxiWalk
 				{
 					steps = start.steps | (1L << start.length);
 					length = (byte) (start.length + 1);
-					
-	//				System.out.println("Vertical: " + pattern);
 				
 					// Find end point.
 					long time = System.currentTimeMillis();
@@ -227,7 +217,6 @@ public class TaxiWalk
 						{
 							steps = steps ^ ((1L << length) - 1);
 						}
-	//					System.out.println("Reduced to: " + pattern);
 						reduce += System.currentTimeMillis() - time;
 						
 						
@@ -238,7 +227,6 @@ public class TaxiWalk
 						if(temp == null)
 						{
 							// Added to tree.
-	//						System.out.println("Added");
 							start.vertical = end;
 							untreated.addLast(end);
 							end = new State(steps, length);
@@ -246,20 +234,11 @@ public class TaxiWalk
 						else
 						{
 							// Present in tree.		
-	//						System.out.println("Present");
 							start.vertical = temp;
 						}
 						contains += System.currentTimeMillis() - time;
 					}
 				}
-				
-//				long time = System.currentTimeMillis();
-//				if(start.horizontal == null && start.vertical == null)
-//				{
-//					start = twoNullPointers;
-//					count--;
-//				}
-//				treePruning += System.currentTimeMillis() - time;
 			}
 			
 			
@@ -322,7 +301,6 @@ public class TaxiWalk
 			System.out.println("Has Loop: " + hasLoop / 1000.0 + "(" + Math.round((double) hasLoop / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Reduce Pattern: " + reduce / 1000.0 + "(" + Math.round((double) reduce / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Tree Contains: " + contains / 1000.0 + "(" + Math.round((double) contains / (endTime - startTime) * 1000) / 10.0 + "%)");
-//			System.out.println("Tree Pruning: " + treePruning / 1000.0 + "(" + Math.round((double) treePruning / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Running the Automaton: " + runAutomaton / 1000.0 + "(" + Math.round((double) runAutomaton / (endTime - startTime) * 1000) / 10.0 + "%)");
 			
 			
@@ -334,7 +312,6 @@ public class TaxiWalk
 			hasLoop = 0;
 			reduce = 0;
 			contains = 0;
-//			treePruning = 0;
 			runAutomaton = 0;
 		}
 	}
@@ -405,14 +382,12 @@ public class TaxiWalk
 		{
 			if(parent.vertical == null)
 			{
-//				System.out.println("Adding");
 				count++;
 				parent.vertical = s;
 				return null;
 			}
 			else
 			{
-//				System.out.println("Present");
 				return parent.vertical;
 			}
 		}
@@ -420,14 +395,12 @@ public class TaxiWalk
 		{
 			if(parent.horizontal == null)
 			{
-//				System.out.println("Adding");
 				count++;
 				parent.horizontal = s;
 				return null;
 			}
 			else
 			{
-//				System.out.println("Present");
 				return parent.horizontal;
 			}
 		}
