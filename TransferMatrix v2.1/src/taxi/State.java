@@ -4,6 +4,7 @@ public class State implements Comparable<State>
 {
 	public long steps;
 	public byte length;
+	public State parent;
 	public State horizontal;
 	public State vertical;
 	public int index;
@@ -12,6 +13,7 @@ public class State implements Comparable<State>
 	{
 		this.steps = steps;
 		this.length = length;
+		this.index = -1;
 	}
 	
 	@Override

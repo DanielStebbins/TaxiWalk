@@ -13,7 +13,7 @@ public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
 
-	public static final int N = 47;
+	public static final int N = 43;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -25,7 +25,7 @@ public class TaxiWalk
 	// Used for building the automaton.
 	public static State genesis = new State(0L, (byte) 0);
 	public static State twoNullPointers = new State(0L, (byte) 0);
-	public static int count = 1;
+	public static int size = 1;
 	public static LinkedList<State> untreated = new LinkedList<State>();
 	
 	public static long findEndpoint = 0;
@@ -58,6 +58,8 @@ public class TaxiWalk
 			// Set up the automaton stuff.
 			untreated.addLast(genesis);
 			int count = 0;
+			twoNullPointers.index = count;
+			count++;
 			
 			// Main automaton-generating code.
 			long steps = 0L;
@@ -68,7 +70,7 @@ public class TaxiWalk
 				State start = untreated.removeFirst();
 				start.index = count;
 				count++;
-	
+				
 				// Try to take a horizontal step.
 				if(start.length < 2 || approach(start.steps, start.length) != 1)
 				{
@@ -142,6 +144,7 @@ public class TaxiWalk
 						{
 							// Added to tree.
 							start.horizontal = end;
+							end.parent = start;
 							untreated.addLast(end);
 							end = new State(steps, length);
 						}
@@ -228,6 +231,7 @@ public class TaxiWalk
 						{
 							// Added to tree.
 							start.vertical = end;
+							end.parent = start;
 							untreated.addLast(end);
 							end = new State(steps, length);
 						}
@@ -239,8 +243,12 @@ public class TaxiWalk
 						contains += System.currentTimeMillis() - time;
 					}
 				}
+		
+				// Reducing Tree
+				if(start.horizontal == null && start.vertical == null) {
+					
+				}
 			}
-			
 			
 			// Running the automaton.
 			long time = System.currentTimeMillis();
@@ -382,7 +390,7 @@ public class TaxiWalk
 		{
 			if(parent.vertical == null)
 			{
-				count++;
+				size++;
 				parent.vertical = s;
 				return null;
 			}
@@ -395,7 +403,7 @@ public class TaxiWalk
 		{
 			if(parent.horizontal == null)
 			{
-				count++;
+				size++;
 				parent.horizontal = s;
 				return null;
 			}
