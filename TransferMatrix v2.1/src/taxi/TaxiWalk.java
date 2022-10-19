@@ -25,7 +25,7 @@ public class TaxiWalk
 	// Used for building the automaton.
 	public static State genesis = new State(0L, (byte) 0);
 	public static State twoNullPointers = new State(0L, (byte) 0);
-	public static int count = 1;
+	public static int size = 1;
 	public static LinkedList<State> untreated = new LinkedList<State>();
 	
 	public static long findEndpoint = 0;
@@ -62,7 +62,6 @@ public class TaxiWalk
 			// Main automaton-generating code.
 			long steps = 0L;
 			byte length = 0;
-			State end = new State(steps, length);
 			while(!untreated.isEmpty())
 			{
 				State start = untreated.removeFirst();
@@ -135,15 +134,14 @@ public class TaxiWalk
 						
 						
 						time = System.currentTimeMillis();
-						end.steps = steps;
-						end.length = length;
-						State temp = putIfAbsent(end);
+						State temp = getState(steps, length);
 						if(temp == null)
 						{
 							// Added to tree.
+							size++;
+							State end = new State(steps, length);
 							start.horizontal = end;
 							untreated.addLast(end);
-							end = new State(steps, length);
 						}
 						else
 						{
@@ -221,15 +219,14 @@ public class TaxiWalk
 						
 						
 						time = System.currentTimeMillis();
-						end.steps = steps;
-						end.length = length;
-						State temp = putIfAbsent(end);
+						State temp = getState(steps, length);
 						if(temp == null)
 						{
 							// Added to tree.
+							size++;
+							State end = new State(steps, length);
 							start.vertical = end;
 							untreated.addLast(end);
-							end = new State(steps, length);
 						}
 						else
 						{
@@ -293,7 +290,7 @@ public class TaxiWalk
 			// Output Statistics.
 			long endTime = System.currentTimeMillis();
 			System.out.println("\nN: " + n);
-			System.out.println("Automaton Size: " + count);
+			System.out.println("Automaton Size: " + size);
 			System.out.println("Number of Taxi Walks: " + taxi);
 			System.out.println("Total Time: " + (endTime - startTime) / 1000.0 + "\n");
 			
@@ -305,7 +302,7 @@ public class TaxiWalk
 			
 			
 			genesis = new State(0L, (byte) 0);
-			count = 0;
+			size = 0;
 			untreated.clear();
 			
 			findEndpoint = 0;
@@ -313,20 +310,6 @@ public class TaxiWalk
 			reduce = 0;
 			contains = 0;
 			runAutomaton = 0;
-		}
-	}
-	
-	public static void unlink(State s)
-	{
-		if(s.horizontal != null)
-		{
-			unlink(s.horizontal);
-			s.horizontal = null;
-		}
-		if(s.vertical != null)
-		{
-			unlink(s.vertical);
-			s.vertical = null;
 		}
 	}
 	
@@ -363,12 +346,12 @@ public class TaxiWalk
 		return loop;
 	}
 	
-	public static State putIfAbsent(State s)
+	public static State getState(long steps, byte length)
 	{
 		State parent = genesis;
-		for(int i = 0; i < s.length - 1; i++)
+		for(int i = 0; i < length - 1; i++)
 		{
-			if(((s.steps >> i) & 1) == 1)
+			if((steps & 1) == 1)
 			{
 				parent = parent.vertical;
 			}
@@ -376,33 +359,16 @@ public class TaxiWalk
 			{
 				parent = parent.horizontal;
 			}
+			steps >>= 1;
 		}
 		
-		if(((s.steps >> (s.length - 1)) & 1) == 1)
+		if(steps == 1)
 		{
-			if(parent.vertical == null)
-			{
-				count++;
-				parent.vertical = s;
-				return null;
-			}
-			else
-			{
-				return parent.vertical;
-			}
+			return parent.vertical;
 		}
 		else
 		{
-			if(parent.horizontal == null)
-			{
-				count++;
-				parent.horizontal = s;
-				return null;
-			}
-			else
-			{
-				return parent.horizontal;
-			}
+			return parent.horizontal;
 		}
 	}
 }
