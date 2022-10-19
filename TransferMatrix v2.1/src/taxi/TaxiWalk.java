@@ -83,7 +83,7 @@ public class TaxiWalk
 					int yStep = 1;
 					for(int i = 0; i < length; i++)
 					{
-						if((steps >>> i & 1) == 0)
+						if((steps >> i & 1) == 0)
 						{	
 							endX += xStep;
 							yStep = -yStep;
@@ -114,7 +114,7 @@ public class TaxiWalk
 								endX = -endX;
 								endY -= 1;
 							}
-							steps = steps >>> 1;
+							steps = steps >> 1;
 							length--;
 							
 							if((steps & 1) == 1)
@@ -169,7 +169,7 @@ public class TaxiWalk
 					int yStep = 1;
 					for(int i = 0; i < length; i++)
 					{
-						if((steps >>> i & 1) == 0)
+						if((steps >> i & 1) == 0)
 						{	
 							endX += xStep;
 							yStep = -yStep;
@@ -200,7 +200,7 @@ public class TaxiWalk
 								endX = -endX;
 								endY -= 1;
 							}
-							steps = steps >>> 1;
+							steps = steps >> 1;
 							length--;
 							
 							if((steps & 1) == 1)
@@ -332,7 +332,7 @@ public class TaxiWalk
 	
 	public static int approach(long steps, byte length)
 	{
-		return (int) ((steps >>> (length - 2) & 1) * 2 + (steps >>> (length - 1)));
+		return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 	}
 	
 	public static boolean hasLoop(long steps, byte length, int endX, int endY)
@@ -346,7 +346,7 @@ public class TaxiWalk
 		int i = 0;
 		while(!loop && i < length - 12)
 		{					
-			if((steps >>> i & 1) == 0)
+			if((steps >> i & 1) == 0)
 			{	
 				x += xStep;
 				yStep = -yStep;
@@ -368,7 +368,7 @@ public class TaxiWalk
 		State parent = genesis;
 		for(int i = 0; i < s.length - 1; i++)
 		{
-			if(((s.steps >>> i) & 1) == 1)
+			if(((s.steps >> i) & 1) == 1)
 			{
 				parent = parent.vertical;
 			}
@@ -378,7 +378,7 @@ public class TaxiWalk
 			}
 		}
 		
-		if(((s.steps >>> (s.length - 1)) & 1) == 1)
+		if(((s.steps >> (s.length - 1)) & 1) == 1)
 		{
 			if(parent.vertical == null)
 			{
