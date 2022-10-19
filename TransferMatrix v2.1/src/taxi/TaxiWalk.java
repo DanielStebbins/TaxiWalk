@@ -80,9 +80,10 @@ public class TaxiWalk
 					int xStep = 1;
 					int endY = 0;
 					int yStep = 1;
+					long tempSteps = steps;
 					for(int i = 0; i < length; i++)
 					{
-						if((steps >> i & 1) == 0)
+						if((tempSteps & 1) == 0)
 						{	
 							endX += xStep;
 							yStep = -yStep;
@@ -92,6 +93,7 @@ public class TaxiWalk
 							endY += yStep;
 							xStep = -xStep;
 						}
+						tempSteps >>= 1;
 					}
 					findEndpoint += System.currentTimeMillis() - time;
 					
@@ -165,9 +167,10 @@ public class TaxiWalk
 					int xStep = 1;
 					int endY = 0;
 					int yStep = 1;
+					long tempSteps = steps;
 					for(int i = 0; i < length; i++)
 					{
-						if((steps >> i & 1) == 0)
+						if((tempSteps & 1) == 0)
 						{	
 							endX += xStep;
 							yStep = -yStep;
@@ -177,6 +180,7 @@ public class TaxiWalk
 							endY += yStep;
 							xStep = -xStep;
 						}
+						tempSteps >>= 1;
 					}
 					findEndpoint += System.currentTimeMillis() - time;
 					
@@ -329,7 +333,7 @@ public class TaxiWalk
 		int i = 0;
 		while(!loop && i < length - 12)
 		{					
-			if((steps >> i & 1) == 0)
+			if((steps & 1) == 0)
 			{	
 				x += xStep;
 				yStep = -yStep;
@@ -339,6 +343,7 @@ public class TaxiWalk
 				y += yStep;
 				xStep = -xStep;
 			}
+			steps >>= 1;
 			loop = x == endX && y == endY;
 			i++;
 		}
