@@ -1,19 +1,27 @@
 #include <iostream>
-#include <list>
 #include <fstream>
 #include <string>
 #include <sstream>
 #include <vector>
+#include <bitset>
 
 struct State {
     uint16_t length;
     uint64_t steps;
-    uint64_t horizontal;
-    uint64_t vertical;
+    uint64_t index;
+    uint64_t childIndices[2]{};
 
-    State(uint16_t length, uint64_t steps, uint64_t h = 0, uint64_t v = 0):
-            length(length), steps(steps), horizontal(h), vertical(v) {}
+    State(uint16_t length, uint64_t steps, uint64_t index):
+        length(length), steps(steps), index(index), childIndices{ULLONG_MAX,ULLONG_MAX} {}
 };
+
+//struct Indices {
+//    uint64_t state;
+//    uint64_t parent;
+//
+//    Indices(uint64_t state, uint64_t parent):
+//        state(state), parent(parent) {}
+//};
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
 {
@@ -22,7 +30,7 @@ void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
     for(int i = 0; i < length; ++i)
     {
         // Try removing if statements.
-        if(steps >> i & 1)
+        if(steps & 1)
         {
             y += yStep;
             xStep = -xStep;
@@ -32,20 +40,21 @@ void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
             x += xStep;
             yStep = -yStep;
         }
+        steps >>= 1;
     }
 }
 
-bool hasLoop(uint64_t steps, uint16_t length, int endX, int endY)
+bool noLoop(uint64_t steps, uint16_t length, int endX, int endY)
 {
     int x = 0;
     int xStep = 1;
     int y = 0;
     int yStep = 1;
-    bool loop = x == endX && y == endY;
+    bool noLoop = x != endX || y != endY;
     int i = 0;
-    while(!loop && i < length - 12)
+    while(noLoop && i < length - 12)
     {
-        if(steps >> i & 1)
+        if(steps & 1)
         {
             y += yStep;
             xStep = -xStep;
@@ -55,10 +64,11 @@ bool hasLoop(uint64_t steps, uint16_t length, int endX, int endY)
             x += xStep;
             yStep = -yStep;
         }
-        loop = x == endX && y == endY;
+        noLoop = x != endX || y != endY;
+        steps >>= 1;
         ++i;
     }
-    return loop;
+    return noLoop;
 }
 
 int approach(uint64_t steps, uint16_t length)
@@ -66,7 +76,7 @@ int approach(uint64_t steps, uint16_t length)
     return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 }
 
-void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, const int stepsToOrigin[])
+void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
 {
     while(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
     {
@@ -85,7 +95,7 @@ void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, const 
 
         if(steps & 1)
         {
-            steps = steps ^ ((1L << length) - 1);
+            steps ^= (1L << length) - 1;
             int temp = endX;
             endX = endY;
             endY = temp;
@@ -95,7 +105,7 @@ void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, const 
     // If first step is now vertical, flip to horizontal.
     if((steps & 1) == 1)
     {
-        steps = steps ^ ((1L << length) - 1);
+        steps ^= (1L << length) - 1;
     }
 }
 
@@ -113,30 +123,101 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
-int taxi(int n)
+uint64_t taxi(int n)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
 
     std::vector<State> states;
     states.reserve(100);
-    states.emplace_back(0, 0);
+    states.emplace_back(0, 0, 0);
 
-    std::list<uint64_t> untreated;
-    untreated.push_back(0);
+    uint64_t untreated = 0;
 
-    while(!untreated.empty())
+    while(untreated != states.size())
     {
-        State start = states.at(untreated.front());
-        untreated.pop_front();
+        State* start = &states.at(untreated);
+        untreated++;
+//        std::cout << std::endl << "Start: " << std::bitset<64>(start->steps) << " (length " << start->length << ")" << std::endl;
+        if(approach(start->steps, start->length) != 1 || start->length < 2)
+        {
+            uint64_t steps = start->steps;
+            uint16_t length = start->length + 1;
+//            std::cout << "H: " << std::bitset<64>(steps) << " (length " << length << ")" << std::endl;
+            int x = 0, y = 0;
+            getPoint(steps, length, x, y);
+//            std::cout << "x=" << x << ", y=" << y << std::endl;
+            if(noLoop(steps, length, x, y))
+            {
+                reduce(steps, length, x, y, n, stepsToOrigin);
+//                std::cout << "Reduce: " << std::bitset<64>(steps) << " (length " << length << ")" << std::endl;
+                State parent = states[0];
+                uint64_t tempSteps = steps;
+//                std::cout << "length: " << length << std::endl;
+                for(int i = 0; i < length - 1; i++)
+                {
+//                    std::cout << "Parent Index: " << parent.childIndices[tempSteps & 1] << std::endl;
+                    parent = states[parent.childIndices[tempSteps & 1]];
+//                    std::cout << "Parent: " << std::bitset<64>(parent.steps) << " (length " << parent.length << ")" << std::endl;
+                    tempSteps >>= 1;
+                }
+//                std::cout << "Parent: " << std::bitset<64>(parent.steps) << " (length " << parent.length << ")" << std::endl;
+                if(parent.childIndices[tempSteps] == ULLONG_MAX)
+                {
+                    start->childIndices[0] = states.size();
+                    states.emplace_back(length, steps, states.size());
+                }
+                else
+                {
+                    start->childIndices[0] = states[parent.childIndices[tempSteps]].index;
+                }
+            }
+        }
 
+        if(approach(start->steps, start->length) != 2 || start->length < 2)
+        {
+            uint64_t steps = start->steps | (1L << start->length);
+            uint16_t length = start->length + 1;
+//            std::cout << "V: " << std::bitset<64>(steps) << " (length " << length << ")" << std::endl;
+            int x = 0, y = 0;
+            getPoint(steps, length, x, y);
+//            std::cout << "x=" << x << ", y=" << y << std::endl;
+            if(noLoop(steps, length, x, y))
+            {
+                reduce(steps, length, x, y, n, stepsToOrigin);
+//                std::cout << "Reduce: " << std::bitset<64>(steps) << " (length " << length << ")" << std::endl;
+                State parent = states[0];
+                uint64_t tempSteps = steps;
+//                std::cout << "length: " << length << std::endl;
+                for(int i = 0; i < length - 1; i++)
+                {
+//                    std::cout << "Parent Index: " << parent.childIndices[tempSteps & 1] << std::endl;
+                    parent = states[parent.childIndices[tempSteps & 1]];
+//                    std::cout << "Parent: " << std::bitset<64>(parent.steps) << " (length " << parent.length << ")" << std::endl;
+                    tempSteps >>= 1;
+                }
+//                std::cout << "Parent: " << std::bitset<64>(parent.steps) << " (length " << parent.length << ")" << std::endl;
+                if(parent.childIndices[tempSteps] == ULLONG_MAX)
+                {
+                    start->childIndices[1] = states.size();
+                    states.emplace_back(length, steps, states.size());
+                }
+                else
+                {
+                    start->childIndices[1] = states[parent.childIndices[tempSteps]].index;
+                }
+            }
+        }
+//        std::cout << "Start Child Indices: " << start->childIndices[0] << " " << start->childIndices[1] << std::endl;
+//        std::cout << "Size: " << states.size() << std::endl;
     }
 
-    return 0;
+    return states.size();
 }
 
 int main()
 {
-    std::cout << taxi(15) << std::endl;
+    // Crashes for n > 23. Off by 1 for 19 and 23.
+    std::cout << taxi(23) << std::endl;
     return 0;
 }
 

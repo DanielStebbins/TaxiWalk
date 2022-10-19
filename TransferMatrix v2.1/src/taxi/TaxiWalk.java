@@ -69,7 +69,7 @@ public class TaxiWalk
 				count++;
 	
 				// Try to take a horizontal step.
-				if(start.length < 2 || approach(start.steps, start.length) != 1)
+				if(approach(start.steps, start.length) != 1 || start.length < 2)
 				{
 					steps = start.steps;
 					length = (byte) (start.length + 1);
@@ -99,7 +99,7 @@ public class TaxiWalk
 					
 					
 					// Check for loop.		
-					if(!hasLoop(steps, length, endX, endY))
+					if(noLoop(steps, length, endX, endY))
 					{
 						// If cannot loop, chop off first step.
 						time = System.currentTimeMillis();
@@ -156,7 +156,7 @@ public class TaxiWalk
 				
 				
 				// Try to take a vertical step.
-				if(start.length < 2 || approach(start.steps, start.length) != 2)
+				if(approach(start.steps, start.length) != 2 || start.length < 2)
 				{
 					steps = start.steps | (1L << start.length);
 					length = (byte) (start.length + 1);
@@ -186,7 +186,7 @@ public class TaxiWalk
 					
 					
 					// Check for loop.		
-					if(!hasLoop(steps, length, endX, endY))
+					if(noLoop(steps, length, endX, endY))
 					{
 						// If cannot loop, chop off first step.
 						time = System.currentTimeMillis();
@@ -322,16 +322,16 @@ public class TaxiWalk
 		return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 	}
 	
-	public static boolean hasLoop(long steps, byte length, int endX, int endY)
+	public static boolean noLoop(long steps, byte length, int endX, int endY)
 	{
 		long time = System.currentTimeMillis();
 		int x = 0;
 		int xStep = 1;
 		int y = 0;
 		int yStep = 1;
-		boolean loop = x == endX && y == endY;
+		boolean noLoop = x != endX || y != endY;
 		int i = 0;
-		while(!loop && i < length - 12)
+		while(noLoop && i < length - 12)
 		{					
 			if((steps & 1) == 0)
 			{	
@@ -344,11 +344,11 @@ public class TaxiWalk
 				xStep = -xStep;
 			}
 			steps >>= 1;
-			loop = x == endX && y == endY;
+			noLoop = x != endX || y != endY;
 			i++;
 		}
 		hasLoop += System.currentTimeMillis() - time;
-		return loop;
+		return noLoop;
 	}
 	
 	public static State getState(long steps, byte length)
