@@ -13,7 +13,7 @@ public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
 
-	public static final int N = 43;
+	public static final int N = 27;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -51,7 +51,7 @@ public class TaxiWalk
 			e.printStackTrace();
 		}
 		
-		for(int n = 43; n <= N; n += 4)
+		for(int n = 27; n <= N; n += 4)
 		{
 			long startTime = System.currentTimeMillis();
 			
@@ -69,8 +69,6 @@ public class TaxiWalk
 			{
 				State start = untreated.removeFirst();
 				System.out.println(start);
-				start.index = count;
-				count++;
 				
 				// Try to take a horizontal step.
 				if(start.length < 2 || approach(start.steps, start.length) != 1)
@@ -257,6 +255,11 @@ public class TaxiWalk
 						start.parent.vertical = twoNullPointers;
 					}
 				}
+				else
+				{
+					start.index = count;
+					count++;
+				}
 			}
 			
 			// Running the automaton.
@@ -271,11 +274,13 @@ public class TaxiWalk
 			
 			for(int i = 1; i <= n; i++)
 			{
+				System.out.println("\n" + i);
 				while(!current.isEmpty())
 				{
 					State start = current.removeFirst();
 					if(start.horizontal != null)
 					{
+						System.out.println(start.horizontal);
 						if(nextCounts[start.horizontal.index] == 0)
 						{
 							next.addLast(start.horizontal);
@@ -285,6 +290,7 @@ public class TaxiWalk
 					
 					if(start.vertical != null)
 					{
+						System.out.println(start.vertical);
 						if(nextCounts[start.vertical.index] == 0)
 						{
 							next.addLast(start.vertical);
@@ -330,20 +336,6 @@ public class TaxiWalk
 			reduce = 0;
 			contains = 0;
 			runAutomaton = 0;
-		}
-	}
-	
-	public static void unlink(State s)
-	{
-		if(s.horizontal != null)
-		{
-			unlink(s.horizontal);
-			s.horizontal = null;
-		}
-		if(s.vertical != null)
-		{
-			unlink(s.vertical);
-			s.vertical = null;
 		}
 	}
 	
