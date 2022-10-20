@@ -13,7 +13,7 @@ public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
 
-	public static final int N = 47;
+	public static final int N = 43;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -51,7 +51,7 @@ public class TaxiWalk
 			e.printStackTrace();
 		}
 		
-		for(int n = 15; n <= N; n += 4)
+		for(int n = 43; n <= N; n += 4)
 		{
 			long startTime = System.currentTimeMillis();
 			
@@ -68,6 +68,7 @@ public class TaxiWalk
 			while(!untreated.isEmpty())
 			{
 				State start = untreated.removeFirst();
+				System.out.println(start);
 				start.index = count;
 				count++;
 				
@@ -245,8 +246,16 @@ public class TaxiWalk
 				}
 		
 				// Reducing Tree
-				if(start.horizontal == null && start.vertical == null) {
-					
+				if(start.horizontal == null && start.vertical == null)
+				{
+					if(start.equals(start.parent.horizontal))
+					{
+						start.parent.horizontal = twoNullPointers;
+					}
+					else
+					{
+						start.parent.vertical = twoNullPointers;
+					}
 				}
 			}
 			

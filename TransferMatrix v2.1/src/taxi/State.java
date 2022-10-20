@@ -27,6 +27,11 @@ public class State implements Comparable<State>
 		return (steps < o.steps) ? -1 : ((steps == o.steps) ? 0 : 1);
 	}
 	
+	public boolean equals(State o)
+	{
+		return o != null && length == o.length && steps == o.steps;
+	}
+	
 	@Override
 	public String toString()
 	{
