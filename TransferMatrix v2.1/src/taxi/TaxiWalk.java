@@ -64,11 +64,9 @@ public class TaxiWalk
 			// Main automaton-generating code.
 			long steps = 0L;
 			byte length = 0;
-			State end = new State(steps, length);
 			while(!untreated.isEmpty())
 			{
 				State start = untreated.removeFirst();
-				System.out.println(start);
 				
 				// Try to take a horizontal step.
 				if(start.length < 2 || approach(start.steps, start.length) != 1)
@@ -136,16 +134,15 @@ public class TaxiWalk
 						
 						
 						time = System.currentTimeMillis();
-						end.steps = steps;
-						end.length = length;
-						State temp = putIfAbsent(end);
+						State temp = getState(steps, length);
 						if(temp == null)
 						{
 							// Added to tree.
+							State end = new State(steps, length);
 							start.horizontal = end;
 							end.parent = start;
 							untreated.addLast(end);
-							end = new State(steps, length);
+							
 						}
 						else
 						{
@@ -223,16 +220,14 @@ public class TaxiWalk
 						
 						
 						time = System.currentTimeMillis();
-						end.steps = steps;
-						end.length = length;
-						State temp = putIfAbsent(end);
+						State temp = getState(steps, length);
 						if(temp == null)
 						{
 							// Added to tree.
+							State end = new State(steps, length);
 							start.vertical = end;
 							end.parent = start;
 							untreated.addLast(end);
-							end = new State(steps, length);
 						}
 						else
 						{
@@ -242,11 +237,29 @@ public class TaxiWalk
 						contains += System.currentTimeMillis() - time;
 					}
 				}
+				
+				if(start.steps == 0b00111000111110L && start.length == 14)
+				{
+					System.out.println("\n" + start);
+					System.out.println(start.horizontal);
+					System.out.println(start.vertical);
+				}
+				
+				if(start.steps == 0b001110001111100L && start.length == 15)
+				{
+					System.out.println("\n" + start);
+					System.out.println(start.horizontal);
+					System.out.println(start.vertical);
+				}
 		
 				// Reducing Tree
-				if(start.horizontal == null && start.vertical == null)
+				if(start.horizontal == null && start.vertical == null && start.length == 15)
 				{
-					if(start.equals(start.parent.horizontal))
+					System.out.println("\nDeleting: " + start);
+					System.out.println("S Parent: " + start.parent);
+					System.out.println("S Horizontal: " + start.parent.horizontal);
+					System.out.println("S Vertical: " + start.parent.vertical);
+					if(start == start.parent.horizontal)
 					{
 						start.parent.horizontal = twoNullPointers;
 					}
@@ -254,6 +267,9 @@ public class TaxiWalk
 					{
 						start.parent.vertical = twoNullPointers;
 					}
+					System.out.println("E Parent: " + start.parent);
+					System.out.println("E Horizontal: " + start.parent.horizontal);
+					System.out.println("E Vertical: " + start.parent.vertical);
 				}
 				else
 				{
@@ -274,13 +290,35 @@ public class TaxiWalk
 			
 			for(int i = 1; i <= n; i++)
 			{
-				System.out.println("\n" + i);
+//				System.out.println("\n" + i);
 				while(!current.isEmpty())
 				{
 					State start = current.removeFirst();
+					
+					if(start.steps == 0b00111000111110L && start.length == 14)
+					{
+						System.out.println("\n" + start);
+						System.out.println(start.horizontal);
+						System.out.println(start.vertical);
+					}
+					
+					if(start.steps == 0b001110001111100L && start.length == 15)
+					{
+						System.out.println("\n" + start);
+						System.out.println(start.horizontal);
+						System.out.println(start.vertical);
+					}
+					
+					
+					
+//					if(start.length == 15)
+//					{
+//						System.out.println(start);
+//					}
+					
 					if(start.horizontal != null)
 					{
-						System.out.println(start.horizontal);
+//						System.out.println(start.horizontal);
 						if(nextCounts[start.horizontal.index] == 0)
 						{
 							next.addLast(start.horizontal);
@@ -290,7 +328,7 @@ public class TaxiWalk
 					
 					if(start.vertical != null)
 					{
-						System.out.println(start.vertical);
+//						System.out.println(start.vertical);
 						if(nextCounts[start.vertical.index] == 0)
 						{
 							next.addLast(start.vertical);
@@ -372,12 +410,12 @@ public class TaxiWalk
 		return loop;
 	}
 	
-	public static State putIfAbsent(State s)
+	public static State getState(long steps, byte length)
 	{
 		State parent = genesis;
-		for(int i = 0; i < s.length - 1; i++)
+		for(int i = 0; i < length - 1; i++)
 		{
-			if(((s.steps >>> i) & 1) == 1)
+			if((steps & 1) == 1)
 			{
 				parent = parent.vertical;
 			}
@@ -385,31 +423,16 @@ public class TaxiWalk
 			{
 				parent = parent.horizontal;
 			}
+			steps >>= 1;
 		}
 		
-		if(((s.steps >>> (s.length - 1)) & 1) == 1)
+		if(steps == 1)
 		{
-			if(parent.vertical == null)
-			{
-				size++;
-				return null;
-			}
-			else
-			{
-				return parent.vertical;
-			}
+			return parent.vertical;
 		}
 		else
 		{
-			if(parent.horizontal == null)
-			{
-				size++;
-				return null;
-			}
-			else
-			{
-				return parent.horizontal;
-			}
+			return parent.horizontal;
 		}
 	}
 }
