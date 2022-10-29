@@ -250,10 +250,10 @@ public class TaxiWalk
 			int[] currentCounts = new int[count];
 			int[] nextCounts = new int[count];
 			
-			currentCounts[genesis.index] = 1;
-			current.addLast(genesis);
+			currentCounts[genesis.horizontal.index] = 1;
+			current.addLast(genesis.horizontal);
 			
-			for(int i = 1; i <= n; i++)
+			for(int i = 2; i <= n; i++)
 			{
 				while(!current.isEmpty())
 				{
@@ -288,6 +288,7 @@ public class TaxiWalk
 			{
 				taxi += currentCounts[current.removeFirst().index];
 			}
+			taxi *= 2;
 			runAutomaton = System.currentTimeMillis() - time;
 			
 			
