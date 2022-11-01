@@ -13,7 +13,7 @@ public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
 
-	public static final int N = 43;
+	public static final int N = 39;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -51,7 +51,7 @@ public class TaxiWalk
 			e.printStackTrace();
 		}
 		
-		for(int n = 39; n <= N; n += 4)
+		for(int n = 15; n <= N; n += 4)
 		{
 			long startTime = System.currentTimeMillis();
 			
@@ -236,13 +236,13 @@ public class TaxiWalk
 					}
 				}
 
-				if(start.vertical != null && start.vertical.steps == 0b1001110001100111000L && start.vertical.length == 19)
-				{
-					System.out.println("\n" + start);
-					System.out.println(start.horizontal);
-					System.out.println(start.vertical);
-				}
-//				
+//				if(start.vertical != null && start.vertical.steps == 0b1001110001100111000L && start.vertical.length == 19)
+//				{
+//					System.out.println("\n" + start);
+//					System.out.println(start.horizontal);
+//					System.out.println(start.vertical);
+//				}
+				
 //				if(start.steps == 0b001110001111100L && start.length == 15)
 //				{
 //					System.out.println("\n" + start);
@@ -257,68 +257,71 @@ public class TaxiWalk
 //					System.out.println("S Parent: " + start.parent);
 //					System.out.println("S Horizontal: " + start.parent.horizontal);
 //					System.out.println("S Vertical: " + start.parent.vertical);
-					if(start == start.parent.horizontal)
+					if(start.parentH != null)
 					{
-						start.parent.horizontal = twoNullPointers;
+						start.parentH.horizontal = twoNullPointers;
 					}
-					else
+					if(start.parentV != null)
 					{
-						start.parent.vertical = twoNullPointers;
+						start.parentV.vertical = twoNullPointers;
 					}
-					if(start.parentCount > 1)
-					{
-						System.out.println(start + ": " + start.parentCount);
-					}
+//					if(start.parentCount > 1)
+//					{
+//						System.out.println(start + ": " + start.parentCount);
+//					}
 //					System.out.println("E Parent: " + start.parent);
 //					System.out.println("E Horizontal: " + start.parent.horizontal);
 //					System.out.println("E Vertical: " + start.parent.vertical);
 				}
 				else if(start.horizontal == null)
 				{
-					if(start.vertical.oneNullParent == null)
+					if(start.vertical.parentH == null || start.vertical.parentH.vertical != null)
 					{
 						start.index = count;
 						count++;
-						start.vertical.parentCount++;
-						start.vertical.oneNullParent = start;
-						if(start.vertical.parent == null)
-						{
-							start.vertical.parent = start;
-						}
+//						start.vertical.parentCount++;
+						start.vertical.parentV = start;
+//						if(start.vertical.parent == null)
+//						{
+//							start.vertical.parent = start;
+//						}
+						
 //						start.vertical.parentCount += 1;
 //						System.out.println("2-1V: " + start.vertical.parentCount);
 					}
 					else
 					{
-						if(start == start.parent.horizontal)
+						if(start.parentH != null)
 						{
-							start.parent.horizontal = start.vertical.oneNullParent;
+							start.parentH.horizontal = start.vertical.parentH;
 						}
-						else
+						if(start.parentV != null)
 						{
-							start.parent.vertical = start.vertical.oneNullParent;
+							start.parentV.vertical = start.vertical.parentH;
 						}
 						
 //						start.vertical.oneNullParent.parentCount += 1;
 //						System.out.println("2-2V: " + start.vertical.oneNullParent.parentCount);
-						if(start.parentCount > 1)
-						{
-							System.out.println(start + ": " + start.parentCount);
-						}
+						
+//						if(start.parentCount > 1)
+//						{
+//							System.out.println(start + ": " + start.parentCount);
+//						}
 					}
 				}
 				else if(start.vertical == null)
 				{
-					if(start.horizontal.oneNullParent == null)
+					if(start.horizontal.parentV == null || start.horizontal.parentV.horizontal != null)
 					{
 						start.index = count;
 						count++;
-						start.horizontal.parentCount++;
-						start.horizontal.oneNullParent = start;
-						if(start.horizontal.parent == null)
-						{
-							start.horizontal.parent = start;
-						}
+//						start.horizontal.parentCount++;
+						start.horizontal.parentH = start;
+//						if(start.horizontal.parent == null)
+//						{
+//							start.horizontal.parent = start;
+//						}
+						
 //						start.horizontal.parentCount += 1;
 //						System.out.println("3-1H: " + start.horizontal.parentCount);
 					}
@@ -331,43 +334,46 @@ public class TaxiWalk
 //							System.out.println(start.horizontal.parent.vertical);
 //						}
 						
-						if(start == start.parent.horizontal)
+						if(start.parentH != null)
 						{
-							start.parent.horizontal = start.horizontal.oneNullParent;
+							start.parentH.horizontal = start.horizontal.parentV;
 						}
-						else
+						if(start.parentV != null)
 						{
-							start.parent.vertical = start.horizontal.oneNullParent;
+							start.parentV.vertical = start.horizontal.parentV;
 						}
 						
 //						start.horizontal.oneNullParent.parentCount += 1;
 //						System.out.println("3-2H: " + start.horizontal.oneNullParent.parentCount);
 						
-						if(start.parentCount > 1)
-						{
-							System.out.println(start + ": " + start.parentCount);
-						}
+//						if(start.parentCount > 1)
+//						{
+//							System.out.println(start + ": " + start.parentCount);
+//						}
 					}
 				}
 				else
 				{
 					start.index = count;
 					count++;
-					start.horizontal.parentCount += 1;
-					if(start.vertical != start.horizontal)
-					{
-						start.vertical.parentCount += 1;
-					}
+//					start.horizontal.parentCount += 1;
+//					if(start.vertical != start.horizontal)
+//					{
+//						start.vertical.parentCount += 1;
+//					}
 //					System.out.println("4H: " + start.horizontal.parentCount);
 //					System.out.println("4V: " + start.vertical.parentCount);
-					if(start.horizontal.parent == null)
-					{
-						start.horizontal.parent = start;
-					}
-					if(start.vertical.parent == null)
-					{
-						start.vertical.parent = start;
-					}
+					
+//					if(start.horizontal.parentH == null)
+//					{
+//						start.horizontal.parentH = start;
+//					}
+//					if(start.vertical.parentV == null)
+//					{
+//						start.vertical.parentV = start;
+//					}
+					start.horizontal.parentH = start;
+					start.vertical.parentV = start;
 				}
 				
 //				if(start.steps == 0b1001110001100111000L && start.length == 19)
@@ -395,15 +401,15 @@ public class TaxiWalk
 				{
 					State start = current.removeFirst();
 					
-					if(start.steps == 0b0011100011001110000L && start.length == 19)
-					{
-						System.out.println("\n" + start);
-						System.out.println(start.horizontal);
-						System.out.println(start.vertical);
-						System.out.println(start.vertical.horizontal);
-						System.out.println(start.vertical.vertical);
-					}
-//					
+//					if(start.steps == 0b0011100011001110000L && start.length == 19)
+//					{
+//						System.out.println("\n" + start);
+//						System.out.println(start.horizontal);
+//						System.out.println(start.vertical);
+//						System.out.println(start.vertical.horizontal);
+//						System.out.println(start.vertical.vertical);
+//					}
+					
 //					if(start.steps == 0b001110001111100L && start.length == 15)
 //					{
 //						System.out.println("\n" + start);
