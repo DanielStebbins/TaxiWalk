@@ -279,6 +279,7 @@ public class TaxiWalk
 					{
 						start.index = count;
 						count++;
+						start.vertical.parentCount++;
 						start.vertical.oneNullParent = start;
 						if(start.vertical.parent == null)
 						{
@@ -289,14 +290,14 @@ public class TaxiWalk
 					}
 					else
 					{
-//						if(start == start.parent.horizontal)
-//						{
-//							start.parent.horizontal = start.vertical.oneNullParent;
-//						}
-//						else
-//						{
-//							start.parent.vertical = start.vertical.oneNullParent;
-//						}
+						if(start == start.parent.horizontal)
+						{
+							start.parent.horizontal = start.vertical.oneNullParent;
+						}
+						else
+						{
+							start.parent.vertical = start.vertical.oneNullParent;
+						}
 						
 //						start.vertical.oneNullParent.parentCount += 1;
 //						System.out.println("2-2V: " + start.vertical.oneNullParent.parentCount);
@@ -312,6 +313,7 @@ public class TaxiWalk
 					{
 						start.index = count;
 						count++;
+						start.horizontal.parentCount++;
 						start.horizontal.oneNullParent = start;
 						if(start.horizontal.parent == null)
 						{
@@ -329,14 +331,14 @@ public class TaxiWalk
 //							System.out.println(start.horizontal.parent.vertical);
 //						}
 						
-//						if(start == start.parent.horizontal)
-//						{
-//							start.parent.horizontal = start.horizontal.oneNullParent;
-//						}
-//						else
-//						{
-//							start.parent.vertical = start.horizontal.oneNullParent;
-//						}
+						if(start == start.parent.horizontal)
+						{
+							start.parent.horizontal = start.horizontal.oneNullParent;
+						}
+						else
+						{
+							start.parent.vertical = start.horizontal.oneNullParent;
+						}
 						
 //						start.horizontal.oneNullParent.parentCount += 1;
 //						System.out.println("3-2H: " + start.horizontal.oneNullParent.parentCount);
