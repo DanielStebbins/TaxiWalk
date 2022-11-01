@@ -250,6 +250,7 @@ public class TaxiWalk
 			int[] currentCounts = new int[count];
 			int[] nextCounts = new int[count];
 			
+			// Faster to start with 1 on the origin or 1 on H?
 			currentCounts[genesis.horizontal.index] = 1;
 			current.addLast(genesis.horizontal);
 			
