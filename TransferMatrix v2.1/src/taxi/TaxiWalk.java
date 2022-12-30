@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.LinkedList;
 
 public class TaxiWalk
@@ -253,7 +254,7 @@ public class TaxiWalk
 			// Faster to start with 1 on the origin or 1 on H?
 			currentCounts[genesis.horizontal.index] = 1;
 			current.addLast(genesis.horizontal);
-			
+//			System.out.println(Arrays.toString(currentCounts));
 			for(int i = 2; i <= n; i++)
 			{
 				while(!current.isEmpty())
@@ -282,6 +283,7 @@ public class TaxiWalk
 				
 				currentCounts = nextCounts;
 				nextCounts = new int[count];
+//				System.out.println(Arrays.toString(currentCounts));
 			}
 	
 			long taxi = 0;
