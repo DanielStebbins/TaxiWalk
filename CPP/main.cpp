@@ -123,6 +123,26 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
+std::string toBinary(uint64_t n, uint16_t len)
+{
+    if(len == 0) {
+        return "Origin";
+    }
+    std::string binary;
+    for(uint16_t i = 0; i < len; i++)
+    {
+        if((n >> i) & 1)
+        {
+            binary += "V";
+        }
+        else
+        {
+            binary += "H";
+        }
+    }
+    return binary;
+}
+
 uint64_t taxi(int n)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
@@ -135,9 +155,9 @@ uint64_t taxi(int n)
 
     while(untreated != states.size())
     {
-        State* start = &states.at(untreated);
-        untreated++;
-//        std::cout << std::endl << "Start: " << std::bitset<64>(start->steps) << " (length " << start->length << ")" << std::endl;
+//        State* start = &states.at(untreated);
+        ++untreated;
+        std::cout << std::endl << "Start: " << toBinary(start->steps, start->length) << std::endl;
         if(approach(start->steps, start->length) != 1 || start->length < 2)
         {
             uint64_t steps = start->steps;
@@ -153,7 +173,7 @@ uint64_t taxi(int n)
                 State parent = states[0];
                 uint64_t tempSteps = steps;
 //                std::cout << "length: " << length << std::endl;
-                for(int i = 0; i < length - 1; i++)
+                for(int i = 0; i < length - 1; ++i)
                 {
 //                    std::cout << "Parent Index: " << parent.childIndices[tempSteps & 1] << std::endl;
                     parent = states[parent.childIndices[tempSteps & 1]];
@@ -168,7 +188,12 @@ uint64_t taxi(int n)
                 }
                 else
                 {
-                    start->childIndices[0] = states[parent.childIndices[tempSteps]].index;
+                    std::cout << "Horizontal Index Reuse" << std::endl;
+                    std::cout << tempSteps << std::endl;
+                    std::cout << parent.childIndices[tempSteps] << std::endl;
+                    std::cout << states[parent.childIndices[tempSteps]].index << std::endl;
+                    start->childIndices[0] = parent.childIndices[tempSteps];
+                    std::cout << start->childIndices[0] << std::endl;
                 }
             }
         }
@@ -199,16 +224,25 @@ uint64_t taxi(int n)
                 if(parent.childIndices[tempSteps] == ULLONG_MAX)
                 {
                     start->childIndices[1] = states.size();
+                    std::cout << "Vertical New State " << start->steps << std::endl;
                     states.emplace_back(length, steps, states.size());
                 }
                 else
                 {
-                    start->childIndices[1] = states[parent.childIndices[tempSteps]].index;
+                    std::cout << "Vertical Index Reuse" << std::endl;
+                    start->childIndices[1] = parent.childIndices[tempSteps];
                 }
             }
         }
-//        std::cout << "Start Child Indices: " << start->childIndices[0] << " " << start->childIndices[1] << std::endl;
-//        std::cout << "Size: " << states.size() << std::endl;
+        std::cout << "End" << std::endl;
+        std::cout << start->steps << std::endl;
+        std::cout << "Steps: " << toBinary(start->steps, start->length) << std::endl;
+        std::cout << "Start Child Indices: " << start->childIndices[0] << " " << start->childIndices[1] << std::endl;
+        std::cout << "Size: " << states.size() << std::endl;
+    }
+
+    for(auto & state : states) {
+        std::cout << toBinary(state.steps, state.length) << std::endl;
     }
 
     return states.size();
@@ -217,7 +251,7 @@ uint64_t taxi(int n)
 int main()
 {
     // Crashes for n > 23. Off by 1 for 19 and 23.
-    std::cout << taxi(23) << std::endl;
+    std::cout << taxi(27) << std::endl;
     return 0;
 }
 
