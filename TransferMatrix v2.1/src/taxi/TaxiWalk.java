@@ -14,7 +14,7 @@ public class TaxiWalk
 {
 	// The length of walk to enumerate. MAX 64 CURRENTLY (long encoding).
 
-	public static final int N = 23;
+	public static final int N = 47;
 	
 	// These constants relate to the previously calculated steps to the origin file.
 	public static final int MAX_N = 100;
@@ -52,7 +52,7 @@ public class TaxiWalk
 			e.printStackTrace();
 		}
 		
-		for(int n = 23; n <= N; n += 4)
+		for(int n = 47; n <= N; n += 4)
 		{
 			long startTime = System.currentTimeMillis();
 			
@@ -243,8 +243,8 @@ public class TaxiWalk
 				}
 			}
 			
-			State[] temp = new State[count];
-			temp[0] = genesis;
+//			State[] temp = new State[count];
+//			temp[0] = genesis;
 			// Running the automaton.
 			long time = System.currentTimeMillis();
 			LinkedList<State> current = new LinkedList<State>();
@@ -254,7 +254,7 @@ public class TaxiWalk
 			
 			// Faster to start with 1 on the origin or 1 on H?
 			
-			temp[1] = genesis.horizontal;
+//			temp[1] = genesis.horizontal;
 			currentCounts[genesis.horizontal.index] = 1;
 			current.addLast(genesis.horizontal);
 //			System.out.println(Arrays.toString(currentCounts));
@@ -270,7 +270,7 @@ public class TaxiWalk
 							next.addLast(start.horizontal);
 						}
 						nextCounts[start.horizontal.index] += currentCounts[start.index];
-						temp[start.horizontal.index] = start.horizontal;
+//						temp[start.horizontal.index] = start.horizontal;
 					}
 					
 					if(start.vertical != null)
@@ -280,7 +280,7 @@ public class TaxiWalk
 							next.addLast(start.vertical);
 						}
 						nextCounts[start.vertical.index] += currentCounts[start.index];
-						temp[start.vertical.index] = start.vertical;
+//						temp[start.vertical.index] = start.vertical;
 					}
 				}
 				current = next;
@@ -291,10 +291,10 @@ public class TaxiWalk
 //				System.out.println(Arrays.toString(currentCounts));
 			}
 			
-			for(int i = 0; i < temp.length; i++)
-			{
-				System.out.println(temp[i]);
-			}
+//			for(int i = 0; i < temp.length; i++)
+//			{
+//				System.out.println(temp[i]);
+//			}
 	
 			long taxi = 0;
 			while(!current.isEmpty())
@@ -320,7 +320,7 @@ public class TaxiWalk
 			
 			
 			genesis = new State(0L, (byte) 0);
-			size = 0;
+			size = 1;
 			untreated.clear();
 			
 			findEndpoint = 0;

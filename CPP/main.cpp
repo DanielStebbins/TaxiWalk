@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
-#include <bitset>
+//#include <bitset>
 
 struct State {
     uint16_t length;
@@ -14,6 +14,26 @@ struct State {
     State(uint16_t length, uint64_t steps, uint64_t index):
         length(length), steps(steps), index(index), childIndices{ULLONG_MAX,ULLONG_MAX} {}
 };
+
+//std::string toBinary(uint64_t n, uint16_t len)
+//{
+//    if(len == 0) {
+//        return "Origin";
+//    }
+//    std::string binary;
+//    for(uint16_t i = 0; i < len; i++)
+//    {
+//        if((n >> i) & 1)
+//        {
+//            binary += "V";
+//        }
+//        else
+//        {
+//            binary += "H";
+//        }
+//    }
+//    return binary;
+//}
 
 //struct Indices {
 //    uint64_t state;
@@ -73,6 +93,7 @@ bool noLoop(uint64_t steps, uint16_t length, int endX, int endY)
 
 int approach(uint64_t steps, uint16_t length)
 {
+//    std::cout << length - 1 << " " << toBinary(steps >> (length - 1), 32) << std::endl;
     return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 }
 
@@ -95,17 +116,22 @@ void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::v
 
         if(steps & 1)
         {
-            steps ^= (1L << length) - 1;
+//            std::cout << "Flip" << std::endl;
+            steps ^= (1ULL << length) - 1;
             int temp = endX;
             endX = endY;
             endY = temp;
         }
+//        std::cout << toBinary(steps, length) << std::endl;
+//        std::cout << endX << " " << endY << std::endl;
+//        std::cout << approach(steps, length) << std::endl;
+//        std::cout << approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100 << std::endl;
     }
 
     // If first step is now vertical, flip to horizontal.
-    if((steps & 1) == 1)
+    if(steps & 1)
     {
-        steps ^= (1L << length) - 1;
+        steps ^= (1ULL << length) - 1;
     }
 }
 
@@ -123,26 +149,6 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
-std::string toBinary(uint64_t n, uint16_t len)
-{
-    if(len == 0) {
-        return "Origin";
-    }
-    std::string binary;
-    for(uint16_t i = 0; i < len; i++)
-    {
-        if((n >> i) & 1)
-        {
-            binary += "V";
-        }
-        else
-        {
-            binary += "H";
-        }
-    }
-    return binary;
-}
-
 uint64_t taxi(int n)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
@@ -153,16 +159,16 @@ uint64_t taxi(int n)
 
     uint64_t untreated = 0;
 
-    while(untreated != states.size())
+    while(untreated < states.size())
     {
 //        State* start = &states.at(untreated);
-        ++untreated;
-        std::cout << std::endl << "Start: " << toBinary(start->steps, start->length) << std::endl;
-        if(approach(start->steps, start->length) != 1 || start->length < 2)
+//        ++untreated;
+//        std::cout << std::endl << "Start: " << toBinary(states[untreated].steps, states[untreated].length) << std::endl;
+        if(approach(states[untreated].steps, states[untreated].length) != 1 || states[untreated].length < 2)
         {
-            uint64_t steps = start->steps;
-            uint16_t length = start->length + 1;
-//            std::cout << "H: " << std::bitset<64>(steps) << " (length " << length << ")" << std::endl;
+            uint64_t steps = states[untreated].steps;
+            uint16_t length = states[untreated].length + 1;
+//            std::cout << "H: " << toBinary(steps, length) << " (length " << length << ")" << std::endl;
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
 //            std::cout << "x=" << x << ", y=" << y << std::endl;
@@ -183,26 +189,22 @@ uint64_t taxi(int n)
 //                std::cout << "Parent: " << std::bitset<64>(parent.steps) << " (length " << parent.length << ")" << std::endl;
                 if(parent.childIndices[tempSteps] == ULLONG_MAX)
                 {
-                    start->childIndices[0] = states.size();
+                    states[untreated].childIndices[0] = states.size();
                     states.emplace_back(length, steps, states.size());
                 }
                 else
                 {
-                    std::cout << "Horizontal Index Reuse" << std::endl;
-                    std::cout << tempSteps << std::endl;
-                    std::cout << parent.childIndices[tempSteps] << std::endl;
-                    std::cout << states[parent.childIndices[tempSteps]].index << std::endl;
-                    start->childIndices[0] = parent.childIndices[tempSteps];
-                    std::cout << start->childIndices[0] << std::endl;
+//                    std::cout << "Horizontal Index Reuse" << std::endl;
+                    states[untreated].childIndices[0] = parent.childIndices[tempSteps];
                 }
             }
         }
 
-        if(approach(start->steps, start->length) != 2 || start->length < 2)
+        if(approach(states[untreated].steps, states[untreated].length) != 2 || states[untreated].length < 2)
         {
-            uint64_t steps = start->steps | (1L << start->length);
-            uint16_t length = start->length + 1;
-//            std::cout << "V: " << std::bitset<64>(steps) << " (length " << length << ")" << std::endl;
+            uint64_t steps = states[untreated].steps | (1ULL << states[untreated].length);
+            uint16_t length = states[untreated].length + 1;
+//            std::cout << "V: " << toBinary(steps, length) << std::endl;
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
 //            std::cout << "x=" << x << ", y=" << y << std::endl;
@@ -223,35 +225,35 @@ uint64_t taxi(int n)
 //                std::cout << "Parent: " << std::bitset<64>(parent.steps) << " (length " << parent.length << ")" << std::endl;
                 if(parent.childIndices[tempSteps] == ULLONG_MAX)
                 {
-                    start->childIndices[1] = states.size();
-                    std::cout << "Vertical New State " << start->steps << std::endl;
+                    states[untreated].childIndices[1] = states.size();
+//                    std::cout << "Vertical New State " << states[untreated].steps << std::endl;
                     states.emplace_back(length, steps, states.size());
                 }
                 else
                 {
-                    std::cout << "Vertical Index Reuse" << std::endl;
-                    start->childIndices[1] = parent.childIndices[tempSteps];
+//                    std::cout << "Vertical Index Reuse" << std::endl;
+                    states[untreated].childIndices[1] = parent.childIndices[tempSteps];
                 }
             }
         }
-        std::cout << "End" << std::endl;
-        std::cout << start->steps << std::endl;
-        std::cout << "Steps: " << toBinary(start->steps, start->length) << std::endl;
-        std::cout << "Start Child Indices: " << start->childIndices[0] << " " << start->childIndices[1] << std::endl;
-        std::cout << "Size: " << states.size() << std::endl;
+//        std::cout << "End" << std::endl;
+//        std::cout << states[untreated].steps << std::endl;
+//        std::cout << "Steps: " << toBinary(states[untreated].steps, states[untreated].length) << std::endl;
+//        std::cout << "Start Child Indices: " << states[untreated].childIndices[0] << " " << states[untreated].childIndices[1] << std::endl;
+//        std::cout << "Size: " << states.size() << std::endl;
+        ++untreated;
     }
 
-    for(auto & state : states) {
-        std::cout << toBinary(state.steps, state.length) << std::endl;
-    }
+//    for(auto & state : states) {
+//        std::cout << toBinary(state.steps, state.length) << std::endl;
+//    }
 
     return states.size();
 }
 
 int main()
 {
-    // Crashes for n > 23. Off by 1 for 19 and 23.
-    std::cout << taxi(27) << std::endl;
+    std::cout << taxi(47) << std::endl;
     return 0;
 }
 

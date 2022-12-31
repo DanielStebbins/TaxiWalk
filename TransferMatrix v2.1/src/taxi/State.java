@@ -25,11 +25,11 @@ public class State
 	    {
 	    	if(((steps >> i) & 1) == 1)
 	    	{
-	    		binary += "1";
+	    		binary += "V";
 	    	}
 	    	else
 	    	{
-	    		binary += "0";
+	    		binary += "H";
 	    	}
 	    }
 //	    for (long i = (1L << (length - 1)); i > 0; i = i / 2) {
