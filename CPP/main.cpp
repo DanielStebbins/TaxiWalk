@@ -4,15 +4,15 @@
 #include <sstream>
 #include <vector>
 //#include <bitset>
+#include <chrono>
 
 struct State {
     uint16_t length;
     uint64_t steps;
-    uint64_t index;
     uint64_t childIndices[2]{};
 
-    State(uint16_t length, uint64_t steps, uint64_t index):
-        length(length), steps(steps), index(index), childIndices{ULLONG_MAX,ULLONG_MAX} {}
+    State(uint16_t length, uint64_t steps):
+        length(length), steps(steps), childIndices{ULLONG_MAX,ULLONG_MAX} {}
 };
 
 //std::string toBinary(uint64_t n, uint16_t len)
@@ -155,7 +155,7 @@ uint64_t taxi(int n)
 
     std::vector<State> states;
     states.reserve(100);
-    states.emplace_back(0, 0, 0);
+    states.emplace_back(0, 0);
 
     uint64_t untreated = 0;
 
@@ -190,7 +190,7 @@ uint64_t taxi(int n)
                 if(parent.childIndices[tempSteps] == ULLONG_MAX)
                 {
                     states[untreated].childIndices[0] = states.size();
-                    states.emplace_back(length, steps, states.size());
+                    states.emplace_back(length, steps);
                 }
                 else
                 {
@@ -227,7 +227,7 @@ uint64_t taxi(int n)
                 {
                     states[untreated].childIndices[1] = states.size();
 //                    std::cout << "Vertical New State " << states[untreated].steps << std::endl;
-                    states.emplace_back(length, steps, states.size());
+                    states.emplace_back(length, steps);
                 }
                 else
                 {
@@ -253,7 +253,10 @@ uint64_t taxi(int n)
 
 int main()
 {
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     std::cout << taxi(47) << std::endl;
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << "Time difference (sec) = " <<  std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() /1000000.0  <<std::endl;
     return 0;
 }
 

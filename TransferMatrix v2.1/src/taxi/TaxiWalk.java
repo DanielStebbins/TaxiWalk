@@ -243,80 +243,80 @@ public class TaxiWalk
 				}
 			}
 			
-//			State[] temp = new State[count];
-//			temp[0] = genesis;
-			// Running the automaton.
-			long time = System.currentTimeMillis();
-			LinkedList<State> current = new LinkedList<State>();
-			LinkedList<State> next = new LinkedList<State>();
-			int[] currentCounts = new int[count];
-			int[] nextCounts = new int[count];
-			
-			// Faster to start with 1 on the origin or 1 on H?
-			
-//			temp[1] = genesis.horizontal;
-			currentCounts[genesis.horizontal.index] = 1;
-			current.addLast(genesis.horizontal);
-//			System.out.println(Arrays.toString(currentCounts));
-			for(int i = 2; i <= n; i++)
-			{
-				while(!current.isEmpty())
-				{
-					State start = current.removeFirst();
-					if(start.horizontal != null)
-					{
-						if(nextCounts[start.horizontal.index] == 0)
-						{
-							next.addLast(start.horizontal);
-						}
-						nextCounts[start.horizontal.index] += currentCounts[start.index];
-//						temp[start.horizontal.index] = start.horizontal;
-					}
-					
-					if(start.vertical != null)
-					{
-						if(nextCounts[start.vertical.index] == 0)
-						{
-							next.addLast(start.vertical);
-						}
-						nextCounts[start.vertical.index] += currentCounts[start.index];
-//						temp[start.vertical.index] = start.vertical;
-					}
-				}
-				current = next;
-				next = new LinkedList<State>();
-				
-				currentCounts = nextCounts;
-				nextCounts = new int[count];
-//				System.out.println(Arrays.toString(currentCounts));
-			}
-			
-//			for(int i = 0; i < temp.length; i++)
+////			State[] temp = new State[count];
+////			temp[0] = genesis;
+//			// Running the automaton.
+//			long time = System.currentTimeMillis();
+//			LinkedList<State> current = new LinkedList<State>();
+//			LinkedList<State> next = new LinkedList<State>();
+//			int[] currentCounts = new int[count];
+//			int[] nextCounts = new int[count];
+//			
+//			// Faster to start with 1 on the origin or 1 on H?
+//			
+////			temp[1] = genesis.horizontal;
+//			currentCounts[genesis.horizontal.index] = 1;
+//			current.addLast(genesis.horizontal);
+////			System.out.println(Arrays.toString(currentCounts));
+//			for(int i = 2; i <= n; i++)
 //			{
-//				System.out.println(temp[i]);
+//				while(!current.isEmpty())
+//				{
+//					State start = current.removeFirst();
+//					if(start.horizontal != null)
+//					{
+//						if(nextCounts[start.horizontal.index] == 0)
+//						{
+//							next.addLast(start.horizontal);
+//						}
+//						nextCounts[start.horizontal.index] += currentCounts[start.index];
+////						temp[start.horizontal.index] = start.horizontal;
+//					}
+//					
+//					if(start.vertical != null)
+//					{
+//						if(nextCounts[start.vertical.index] == 0)
+//						{
+//							next.addLast(start.vertical);
+//						}
+//						nextCounts[start.vertical.index] += currentCounts[start.index];
+////						temp[start.vertical.index] = start.vertical;
+//					}
+//				}
+//				current = next;
+//				next = new LinkedList<State>();
+//				
+//				currentCounts = nextCounts;
+//				nextCounts = new int[count];
+////				System.out.println(Arrays.toString(currentCounts));
 //			}
-	
-			long taxi = 0;
-			while(!current.isEmpty())
-			{
-				taxi += currentCounts[current.removeFirst().index];
-			}
-			taxi *= 2;
-			runAutomaton = System.currentTimeMillis() - time;
+//			
+////			for(int i = 0; i < temp.length; i++)
+////			{
+////				System.out.println(temp[i]);
+////			}
+//	
+//			long taxi = 0;
+//			while(!current.isEmpty())
+//			{
+//				taxi += currentCounts[current.removeFirst().index];
+//			}
+//			taxi *= 2;
+//			runAutomaton = System.currentTimeMillis() - time;
 			
 			
 			// Output Statistics.
 			long endTime = System.currentTimeMillis();
 			System.out.println("\nN: " + n);
 			System.out.println("Automaton Size: " + size);
-			System.out.println("Number of Taxi Walks: " + taxi);
+//			System.out.println("Number of Taxi Walks: " + taxi);
 			System.out.println("Total Time: " + (endTime - startTime) / 1000.0 + "\n");
 			
 			System.out.println("Find Endpoint: " + findEndpoint / 1000.0 + "(" + Math.round((double) findEndpoint / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Has Loop: " + hasLoop / 1000.0 + "(" + Math.round((double) hasLoop / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Reduce Pattern: " + reduce / 1000.0 + "(" + Math.round((double) reduce / (endTime - startTime) * 1000) / 10.0 + "%)");
 			System.out.println("Tree Contains: " + contains / 1000.0 + "(" + Math.round((double) contains / (endTime - startTime) * 1000) / 10.0 + "%)");
-			System.out.println("Running the Automaton: " + runAutomaton / 1000.0 + "(" + Math.round((double) runAutomaton / (endTime - startTime) * 1000) / 10.0 + "%)");
+//			System.out.println("Running the Automaton: " + runAutomaton / 1000.0 + "(" + Math.round((double) runAutomaton / (endTime - startTime) * 1000) / 10.0 + "%)");
 			
 			
 			genesis = new State(0L, (byte) 0);
