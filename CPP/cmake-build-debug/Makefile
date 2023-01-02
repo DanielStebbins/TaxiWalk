@@ -128,6 +128,30 @@ CPP/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\CPP.dir\build.make CMakeFiles/CPP.dir/build
 .PHONY : CPP/fast
 
+TaxiFunctionless.obj: TaxiFunctionless.cpp.obj
+.PHONY : TaxiFunctionless.obj
+
+# target to build an object file
+TaxiFunctionless.cpp.obj:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\CPP.dir\build.make CMakeFiles/CPP.dir/TaxiFunctionless.cpp.obj
+.PHONY : TaxiFunctionless.cpp.obj
+
+TaxiFunctionless.i: TaxiFunctionless.cpp.i
+.PHONY : TaxiFunctionless.i
+
+# target to preprocess a source file
+TaxiFunctionless.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\CPP.dir\build.make CMakeFiles/CPP.dir/TaxiFunctionless.cpp.i
+.PHONY : TaxiFunctionless.cpp.i
+
+TaxiFunctionless.s: TaxiFunctionless.cpp.s
+.PHONY : TaxiFunctionless.s
+
+# target to generate assembly for a file
+TaxiFunctionless.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\CPP.dir\build.make CMakeFiles/CPP.dir/TaxiFunctionless.cpp.s
+.PHONY : TaxiFunctionless.cpp.s
+
 main.obj: main.cpp.obj
 .PHONY : main.obj
 
@@ -161,6 +185,9 @@ help:
 	@echo ... edit_cache
 	@echo ... rebuild_cache
 	@echo ... CPP
+	@echo ... TaxiFunctionless.obj
+	@echo ... TaxiFunctionless.i
+	@echo ... TaxiFunctionless.s
 	@echo ... main.obj
 	@echo ... main.i
 	@echo ... main.s
