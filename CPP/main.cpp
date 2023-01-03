@@ -1,7 +1,7 @@
 // Should use 16GB for N=55, 87GB for N=59, 482GB for N=63.
 // (47->51 shows x1.53 per N increase, not x1.5143)
-// Runs N=51 in 76 seconds using 2.8GB.
-// Runs N=47 in 12.2 seconds using 0.5GB.
+// Runs N=51 in 74 seconds using 2.8GB.
+// Runs N=47 in 12 seconds using 0.5GB.
 
 #include <iostream>
 #include <fstream>
@@ -248,7 +248,9 @@ uint64_t taxi(int N)
 
     // Sets "H" to current count 1.
     automaton[1].var1 = 1;
-    for(int n = 2; n <= N; ++n)
+
+    // Ends one step early, because on the final loop there's no need to move var2 to var1.
+    for(int n = 2; n < N; ++n)
     {
         for(auto & state : automaton)
         {
@@ -270,10 +272,21 @@ uint64_t taxi(int N)
             state.var2 = 0;
         }
     }
+
     uint64_t taxiWalks = 0;
     for(auto & state : automaton)
     {
-        taxiWalks += state.var1;
+        if(state.var1)
+        {
+            if(state.childIndices[0] != ULLONG_MAX)
+            {
+                taxiWalks += state.var1;
+            }
+            if(state.childIndices[1] != ULLONG_MAX)
+            {
+                taxiWalks += state.var1;
+            }
+        }
     }
     return taxiWalks * 2;
 }
@@ -281,7 +294,7 @@ uint64_t taxi(int N)
 int main()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::cout << taxi(47) << std::endl;
+    std::cout << taxi(51) << std::endl;
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
 //    double getPoint = (double) getPointTime / 1000000000.0;
@@ -299,11 +312,3 @@ int main()
 //    std::cout << "Sum of Times: " << sumTime << " (" << (sumTime / totalTime * 100.0) << "%)" << std::endl;
     return 0;
 }
-
-//struct Indices {
-//    uint64_t state;
-//    uint64_t parent;
-//
-//    Indices(uint64_t state, uint64_t parent):
-//        state(state), parent(parent) {}
-//};
