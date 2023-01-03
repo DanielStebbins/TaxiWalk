@@ -1,3 +1,7 @@
+// Should use 23GB for N=55, 125GB for N=59, 680GB for N=63.
+// Runs N=51 in 82.9 seconds using 4.2GB.
+// Runs N=47 in 13.5 seconds using 0.77GB.
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -269,7 +273,7 @@ uint64_t taxi(int N)
 int main()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::cout << taxi(55) << std::endl;
+    std::cout << taxi(47) << std::endl;
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
 //    double getPoint = (double) getPointTime / 1000000000.0;
