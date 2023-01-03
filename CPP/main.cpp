@@ -13,13 +13,34 @@
 //long long reduceTime = 0;
 //long long updateAutomatonTime = 0;
 
+std::string toBinary(uint64_t n, uint16_t len)
+{
+    if(len == 0) {
+        return "Origin";
+    }
+    std::string binary;
+    for(uint16_t i = 0; i < len; i++)
+    {
+        if((n >> i) & 1)
+        {
+            binary += "V";
+        }
+        else
+        {
+            binary += "H";
+        }
+    }
+    return binary;
+}
+
 struct State {
     uint16_t length;
     uint64_t steps;
     uint64_t childIndices[2]{};
+    uint64_t counts[2]{};
 
     State(uint16_t length, uint64_t steps):
-        length(length), steps(steps), childIndices{ULLONG_MAX,ULLONG_MAX} {}
+        length(length), steps(steps), childIndices{ULLONG_MAX,ULLONG_MAX}, counts{0,0} {}
 };
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
@@ -131,12 +152,12 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
-uint64_t taxi(int n)
+std::vector<State> makeAutomaton(int n)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
 
     std::vector<State> states;
-    states.reserve(16704000);
+    states.reserve(91355000);
     states.emplace_back(0, 0);
 
     uint64_t untreated = 0;
@@ -207,13 +228,48 @@ uint64_t taxi(int n)
         }
         ++untreated;
     }
-    return states.size();
+    return states;
+}
+
+uint64_t taxi(int N)
+{
+    std::vector<State> automaton = makeAutomaton(N);
+    // Sets "H" to current count 1.
+    automaton[1].counts[0] = 1;
+    for(int n = 2; n <= N; ++n)
+    {
+        for(auto & state : automaton)
+        {
+            if(state.counts[0])
+            {
+                if(state.childIndices[0] != ULLONG_MAX)
+                {
+                    automaton[state.childIndices[0]].counts[1] += state.counts[0];
+                }
+                if(state.childIndices[1] != ULLONG_MAX)
+                {
+                    automaton[state.childIndices[1]].counts[1] += state.counts[0];
+                }
+            }
+        }
+        for(auto & state : automaton)
+        {
+            state.counts[0] = state.counts[1];
+            state.counts[1] = 0;
+        }
+    }
+    uint64_t taxiWalks = 0;
+    for(auto & state : automaton)
+    {
+        taxiWalks += state.counts[0];
+    }
+    return taxiWalks * 2;
 }
 
 int main()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::cout << taxi(47) << std::endl;
+    std::cout << taxi(55) << std::endl;
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
 //    double getPoint = (double) getPointTime / 1000000000.0;
@@ -231,26 +287,6 @@ int main()
 //    std::cout << "Sum of Times: " << sumTime << " (" << (sumTime / totalTime * 100.0) << "%)" << std::endl;
     return 0;
 }
-
-//std::string toBinary(uint64_t n, uint16_t len)
-//{
-//    if(len == 0) {
-//        return "Origin";
-//    }
-//    std::string binary;
-//    for(uint16_t i = 0; i < len; i++)
-//    {
-//        if((n >> i) & 1)
-//        {
-//            binary += "V";
-//        }
-//        else
-//        {
-//            binary += "H";
-//        }
-//    }
-//    return binary;
-//}
 
 //struct Indices {
 //    uint64_t state;

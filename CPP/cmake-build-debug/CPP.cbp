@@ -82,9 +82,6 @@
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="C:/Users/danrs/Documents/GitHub/TaxiWalk/CPP/TaxiFunctionless.cpp">
-			<Option target="CPP"/>
-		</Unit>
 		<Unit filename="C:/Users/danrs/Documents/GitHub/TaxiWalk/CPP/main.cpp">
 			<Option target="CPP"/>
 		</Unit>

@@ -80,12 +80,12 @@ clean: CMakeFiles/CPP.dir/clean
 CMakeFiles/CPP.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\CPP.dir\build.make CMakeFiles/CPP.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\CPP.dir\build.make CMakeFiles/CPP.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\cmake-build-debug\CMakeFiles --progress-num=1,2,3 "Built target CPP"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\cmake-build-debug\CMakeFiles --progress-num=1,2 "Built target CPP"
 .PHONY : CMakeFiles/CPP.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/CPP.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\cmake-build-debug\CMakeFiles 3
+	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\cmake-build-debug\CMakeFiles 2
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 CMakeFiles/CPP.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\cmake-build-debug\CMakeFiles 0
 .PHONY : CMakeFiles/CPP.dir/rule
