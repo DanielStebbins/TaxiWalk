@@ -1,6 +1,7 @@
-// Should use 23GB for N=55, 125GB for N=59, 680GB for N=63.
+// Should use 16GB for N=55, 87GB for N=59, 482GB for N=63.
+// (47->51 shows x1.53 per N increase, not x1.5143)
 // Runs N=51 in 76 seconds using 2.8GB.
-// Runs N=47 in 12.5 seconds using 0.5GB.
+// Runs N=47 in 12.2 seconds using 0.5GB.
 
 #include <iostream>
 #include <fstream>
@@ -17,33 +18,33 @@
 //long long reduceTime = 0;
 //long long updateAutomatonTime = 0;
 
-std::string toBinary(uint64_t n, uint16_t len)
-{
-    if(len == 0) {
-        return "Origin";
-    }
-    std::string binary;
-    for(uint16_t i = 0; i < len; i++)
-    {
-        if((n >> i) & 1)
-        {
-            binary += "V";
-        }
-        else
-        {
-            binary += "H";
-        }
-    }
-    return binary;
-}
+//std::string toBinary(uint64_t n, uint16_t len)
+//{
+//    if(len == 0) {
+//        return "Origin";
+//    }
+//    std::string binary;
+//    for(uint16_t i = 0; i < len; i++)
+//    {
+//        if((n >> i) & 1)
+//        {
+//            binary += "V";
+//        }
+//        else
+//        {
+//            binary += "H";
+//        }
+//    }
+//    return binary;
+//}
 
 struct State {
-    uint64_t length;
-    uint64_t steps;
+    uint64_t var1;
+    uint64_t var2;
     uint64_t childIndices[2]{};
 
     State(uint16_t length, uint64_t steps):
-        length(length), steps(steps), childIndices{ULLONG_MAX,ULLONG_MAX} {}
+        var1(length), var2(steps), childIndices{ULLONG_MAX,ULLONG_MAX} {}
 };
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
@@ -167,10 +168,11 @@ std::vector<State> makeAutomaton(int n)
 
     while(untreated < states.size())
     {
-        if(approach(states[untreated].steps, states[untreated].length) != 1 || states[untreated].length < 2)
+        if(approach(states[untreated].var2, states[untreated].var1) != 1 || states[untreated].var1 < 2)
         {
-            uint64_t steps = states[untreated].steps;
-            uint16_t length = states[untreated].length + 1;
+            uint16_t length = states[untreated].var1 + 1;
+            uint64_t steps = states[untreated].var2;
+
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
             if(noLoop(steps, length, x, y))
@@ -199,10 +201,11 @@ std::vector<State> makeAutomaton(int n)
             }
         }
 
-        if(approach(states[untreated].steps, states[untreated].length) != 2 || states[untreated].length < 2)
+        if(approach(states[untreated].var2, states[untreated].var1) != 2 || states[untreated].var1 < 2)
         {
-            uint64_t steps = states[untreated].steps | (1ULL << states[untreated].length);
-            uint16_t length = states[untreated].length + 1;
+            uint16_t length = states[untreated].var1 + 1;
+            uint64_t steps = states[untreated].var2 | (1ULL << states[untreated].var1);
+
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
             if(noLoop(steps, length, x, y))
@@ -233,8 +236,8 @@ std::vector<State> makeAutomaton(int n)
     }
     for(auto & state : states)
     {
-        state.length = 0;
-        state.steps = 0;
+        state.var1 = 0;
+        state.var2 = 0;
     }
     return states;
 }
@@ -242,34 +245,35 @@ std::vector<State> makeAutomaton(int n)
 uint64_t taxi(int N)
 {
     std::vector<State> automaton = makeAutomaton(N);
+
     // Sets "H" to current count 1.
-    automaton[1].length = 1;
+    automaton[1].var1 = 1;
     for(int n = 2; n <= N; ++n)
     {
         for(auto & state : automaton)
         {
-            if(state.length)
+            if(state.var1)
             {
                 if(state.childIndices[0] != ULLONG_MAX)
                 {
-                    automaton[state.childIndices[0]].steps += state.length;
+                    automaton[state.childIndices[0]].var2 += state.var1;
                 }
                 if(state.childIndices[1] != ULLONG_MAX)
                 {
-                    automaton[state.childIndices[1]].steps += state.length;
+                    automaton[state.childIndices[1]].var2 += state.var1;
                 }
             }
         }
         for(auto & state : automaton)
         {
-            state.length = state.steps;
-            state.steps = 0;
+            state.var1 = state.var2;
+            state.var2 = 0;
         }
     }
     uint64_t taxiWalks = 0;
     for(auto & state : automaton)
     {
-        taxiWalks += state.length;
+        taxiWalks += state.var1;
     }
     return taxiWalks * 2;
 }
@@ -277,7 +281,7 @@ uint64_t taxi(int N)
 int main()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::cout << taxi(51) << std::endl;
+    std::cout << taxi(47) << std::endl;
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
 //    double getPoint = (double) getPointTime / 1000000000.0;
