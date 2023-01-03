@@ -1,6 +1,6 @@
 // Should use 23GB for N=55, 125GB for N=59, 680GB for N=63.
-// Runs N=51 in 82.9 seconds using 4.2GB.
-// Runs N=47 in 13.5 seconds using 0.77GB.
+// Runs N=51 in 76 seconds using 2.8GB.
+// Runs N=47 in 12.5 seconds using 0.5GB.
 
 #include <iostream>
 #include <fstream>
@@ -38,13 +38,12 @@ std::string toBinary(uint64_t n, uint16_t len)
 }
 
 struct State {
-    uint16_t length;
+    uint64_t length;
     uint64_t steps;
     uint64_t childIndices[2]{};
-    uint64_t counts[2]{};
 
     State(uint16_t length, uint64_t steps):
-        length(length), steps(steps), childIndices{ULLONG_MAX,ULLONG_MAX}, counts{0,0} {}
+        length(length), steps(steps), childIndices{ULLONG_MAX,ULLONG_MAX} {}
 };
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
@@ -232,6 +231,11 @@ std::vector<State> makeAutomaton(int n)
         }
         ++untreated;
     }
+    for(auto & state : states)
+    {
+        state.length = 0;
+        state.steps = 0;
+    }
     return states;
 }
 
@@ -239,33 +243,33 @@ uint64_t taxi(int N)
 {
     std::vector<State> automaton = makeAutomaton(N);
     // Sets "H" to current count 1.
-    automaton[1].counts[0] = 1;
+    automaton[1].length = 1;
     for(int n = 2; n <= N; ++n)
     {
         for(auto & state : automaton)
         {
-            if(state.counts[0])
+            if(state.length)
             {
                 if(state.childIndices[0] != ULLONG_MAX)
                 {
-                    automaton[state.childIndices[0]].counts[1] += state.counts[0];
+                    automaton[state.childIndices[0]].steps += state.length;
                 }
                 if(state.childIndices[1] != ULLONG_MAX)
                 {
-                    automaton[state.childIndices[1]].counts[1] += state.counts[0];
+                    automaton[state.childIndices[1]].steps += state.length;
                 }
             }
         }
         for(auto & state : automaton)
         {
-            state.counts[0] = state.counts[1];
-            state.counts[1] = 0;
+            state.length = state.steps;
+            state.steps = 0;
         }
     }
     uint64_t taxiWalks = 0;
     for(auto & state : automaton)
     {
-        taxiWalks += state.counts[0];
+        taxiWalks += state.length;
     }
     return taxiWalks * 2;
 }
@@ -273,7 +277,7 @@ uint64_t taxi(int N)
 int main()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::cout << taxi(47) << std::endl;
+    std::cout << taxi(51) << std::endl;
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
 //    double getPoint = (double) getPointTime / 1000000000.0;
