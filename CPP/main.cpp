@@ -8,35 +8,7 @@
 #include <string>
 #include <sstream>
 #include <vector>
-//#include <bitset>
 #include <chrono>
-
-// Timers
-//long long getPointTime = 0;
-//long long noLoopTime = 0;
-//long long approachTime = 0;
-//long long reduceTime = 0;
-//long long updateAutomatonTime = 0;
-
-//std::string toBinary(uint64_t n, uint16_t len)
-//{
-//    if(len == 0) {
-//        return "Origin";
-//    }
-//    std::string binary;
-//    for(uint16_t i = 0; i < len; i++)
-//    {
-//        if((n >> i) & 1)
-//        {
-//            binary += "V";
-//        }
-//        else
-//        {
-//            binary += "H";
-//        }
-//    }
-//    return binary;
-//}
 
 struct State {
     uint64_t var1;
@@ -49,12 +21,10 @@ struct State {
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
 {
-//    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     int xStep = 1;
     int yStep = 1;
     for(int i = 0; i < length; ++i)
     {
-        // Try removing if statements.
         if(steps & 1)
         {
             y += yStep;
@@ -67,12 +37,10 @@ void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
         }
         steps >>= 1;
     }
-//    getPointTime += (std::chrono::steady_clock::now() - begin).count();
 }
 
 bool noLoop(uint64_t steps, uint16_t length, int endX, int endY)
 {
-//    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     int x = 0;
     int xStep = 1;
     int y = 0;
@@ -95,21 +63,16 @@ bool noLoop(uint64_t steps, uint16_t length, int endX, int endY)
         steps >>= 1;
         ++i;
     }
-//    noLoopTime += (std::chrono::steady_clock::now() - begin).count();
     return noLoop;
 }
 
 int approach(uint64_t steps, uint16_t length)
 {
-//    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    int temp = (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
-//    approachTime += (std::chrono::steady_clock::now() - begin).count();
-    return temp;
+    return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 }
 
 void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
 {
-//    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     while(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
     {
         if(steps & 1)
@@ -134,12 +97,11 @@ void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::v
         }
     }
 
-    // If first step is now vertical, flip to horizontal.
+    // If first step is vertical, flip to horizontal.
     if(steps & 1)
     {
         steps ^= (1ULL << length) - 1;
     }
-//    reduceTime += (std::chrono::steady_clock::now() - begin).count();
 }
 
 std::vector<int> getStepsToOrigin()
@@ -179,7 +141,6 @@ std::vector<State> makeAutomaton(int n)
             {
                 reduce(steps, length, x, y, n, stepsToOrigin);
 
-//                std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                 State parent = states[0];
                 uint64_t tempSteps = steps;
                 for(int i = 0; i < length - 1; ++i)
@@ -197,7 +158,6 @@ std::vector<State> makeAutomaton(int n)
                 {
                     states[untreated].children[0] = parent.children[tempSteps];
                 }
-//                updateAutomatonTime += (std::chrono::steady_clock::now() - begin).count();
             }
         }
 
@@ -212,7 +172,6 @@ std::vector<State> makeAutomaton(int n)
             {
                 reduce(steps, length, x, y, n, stepsToOrigin);
 
-//                std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
                 State parent = states[0];
                 uint64_t tempSteps = steps;
                 for(int i = 0; i < length - 1; i++)
@@ -229,7 +188,6 @@ std::vector<State> makeAutomaton(int n)
                 {
                     states[untreated].children[1] = parent.children[tempSteps];
                 }
-//                updateAutomatonTime += (std::chrono::steady_clock::now() - begin).count();
             }
         }
         ++untreated;
@@ -294,21 +252,9 @@ uint64_t taxi(int N)
 int main()
 {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::cout << taxi(51) << std::endl;
+    std::cout << taxi(43) << std::endl;
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
-//    double getPoint = (double) getPointTime / 1000000000.0;
-//    double noLoop = (double) noLoopTime / 1000000000.0;
-//    double approach = (double) approachTime / 1000000000.0;
-//    double reduce = (double) reduceTime / 1000000000.0;
-//    double updateAutomaton = (double) updateAutomatonTime / 1000000000.0;
-//    double sumTime = (double) (getPointTime + noLoopTime + approachTime + reduceTime + updateAutomatonTime) / 1000000000.0;
     std::cout << "Total Time: " << totalTime << std::endl;
-//    std::cout << "Get Point Time: " << getPoint << " (" << (getPoint / totalTime * 100.0) << "%)" << std::endl;
-//    std::cout << "No Loop Time: " << noLoop << " (" << (noLoop / totalTime * 100.0) << "%)" << std::endl;
-//    std::cout << "Approach Time: " << approach << " (" << (approach / totalTime * 100.0) << "%)" << std::endl;
-//    std::cout << "Reduce Time: " << reduce << " (" << (reduce / totalTime * 100.0) << "%)" << std::endl;
-//    std::cout << "Update Automaton Time: " << updateAutomaton << " (" << (updateAutomaton / totalTime * 100.0) << "%)" << std::endl;
-//    std::cout << "Sum of Times: " << sumTime << " (" << (sumTime / totalTime * 100.0) << "%)" << std::endl;
     return 0;
 }
