@@ -1,6 +1,6 @@
 // Should use 16GB for N=55, 87GB for N=59, 482GB for N=63.
-// (47->51 shows x1.53 per N increase, not x1.5143)
-// Runs N=51 in 74 seconds using 2.8GB.
+// (47->51 shows x1.53+ per N increase, not x1.5143)
+// Runs N=51 in 73 seconds using 2.8GB.
 // Runs N=47 in 12 seconds using 0.5GB.
 
 #include <iostream>
@@ -41,10 +41,10 @@
 struct State {
     uint64_t var1;
     uint64_t var2;
-    uint64_t childIndices[2]{};
+    State *children[2]{};
 
     State(uint16_t length, uint64_t steps):
-        var1(length), var2(steps), childIndices{ULLONG_MAX,ULLONG_MAX} {}
+        var1(length), var2(steps), children{nullptr,nullptr} {}
 };
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
@@ -184,18 +184,18 @@ std::vector<State> makeAutomaton(int n)
                 uint64_t tempSteps = steps;
                 for(int i = 0; i < length - 1; ++i)
                 {
-                    parent = states[parent.childIndices[tempSteps & 1]];
+                    parent = *parent.children[tempSteps & 1];
                     tempSteps >>= 1;
                 }
 
-                if(parent.childIndices[tempSteps] == ULLONG_MAX)
+                if(!parent.children[tempSteps])
                 {
-                    states[untreated].childIndices[0] = states.size();
                     states.emplace_back(length, steps);
+                    states[untreated].children[0] = &states[states.size() - 1];
                 }
                 else
                 {
-                    states[untreated].childIndices[0] = parent.childIndices[tempSteps];
+                    states[untreated].children[0] = parent.children[tempSteps];
                 }
 //                updateAutomatonTime += (std::chrono::steady_clock::now() - begin).count();
             }
@@ -217,17 +217,17 @@ std::vector<State> makeAutomaton(int n)
                 uint64_t tempSteps = steps;
                 for(int i = 0; i < length - 1; i++)
                 {
-                    parent = states[parent.childIndices[tempSteps & 1]];
+                    parent = *parent.children[tempSteps & 1];
                     tempSteps >>= 1;
                 }
-                if(parent.childIndices[tempSteps] == ULLONG_MAX)
+                if(!parent.children[tempSteps])
                 {
-                    states[untreated].childIndices[1] = states.size();
                     states.emplace_back(length, steps);
+                    states[untreated].children[1] = &states[states.size() - 1];
                 }
                 else
                 {
-                    states[untreated].childIndices[1] = parent.childIndices[tempSteps];
+                    states[untreated].children[1] = parent.children[tempSteps];
                 }
 //                updateAutomatonTime += (std::chrono::steady_clock::now() - begin).count();
             }
@@ -256,13 +256,13 @@ uint64_t taxi(int N)
         {
             if(state.var1)
             {
-                if(state.childIndices[0] != ULLONG_MAX)
+                if(state.children[0])
                 {
-                    automaton[state.childIndices[0]].var2 += state.var1;
+                    (*state.children[0]).var2 += state.var1;
                 }
-                if(state.childIndices[1] != ULLONG_MAX)
+                if(state.children[1])
                 {
-                    automaton[state.childIndices[1]].var2 += state.var1;
+                    (*state.children[1]).var2 += state.var1;
                 }
             }
         }
@@ -278,11 +278,11 @@ uint64_t taxi(int N)
     {
         if(state.var1)
         {
-            if(state.childIndices[0] != ULLONG_MAX)
+            if(state.children[0])
             {
                 taxiWalks += state.var1;
             }
-            if(state.childIndices[1] != ULLONG_MAX)
+            if(state.children[1])
             {
                 taxiWalks += state.var1;
             }
