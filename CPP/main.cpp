@@ -133,6 +133,7 @@ std::vector<State> makeAutomaton(int n)
 
     while(untreated < states.size())
     {
+        // Horizontal Step.
         if(approach(states[untreated].var2, states[untreated].var1) != 1 || states[untreated].var1 < 2)
         {
             uint16_t length = states[untreated].var1 + 1;
@@ -164,6 +165,7 @@ std::vector<State> makeAutomaton(int n)
             }
         }
 
+        // Vertical Step.
         if(approach(states[untreated].var2, states[untreated].var1) != 2 || states[untreated].var1 < 2)
         {
             uint16_t length = states[untreated].var1 + 1;
@@ -195,6 +197,8 @@ std::vector<State> makeAutomaton(int n)
         }
         ++untreated;
     }
+
+    // Reset first 16 bytes to use when running the automaton.
     for(auto & state : states)
     {
         state.var1 = 0;
@@ -251,6 +255,7 @@ uint64_t taxi(int N)
     }
     return taxiWalks * 2;
 }
+
 
 
 
