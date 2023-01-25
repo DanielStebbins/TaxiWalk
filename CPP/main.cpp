@@ -1,7 +1,10 @@
-// Should use 16GB for N=55, 87GB for N=59, 482GB for N=63.
-// (47->51 shows x1.53+ per N increase, not x1.5143)
-// Runs N=51 in 73 seconds using 2.8GB.
 // Runs N=47 in 12 seconds using 0.5GB.
+// Runs N=51 in 73 seconds using 2.8GB.
+
+// Predictions (Time x1.58 (x6.2 per 4), Space x1.53 (x5.5 per 4)):
+// N=55: 7m45s, 16GB.
+// N=59: 48m, 87GB.
+// N=63: 5h, 482GB.
 
 #include <iostream>
 #include <fstream>
@@ -249,26 +252,31 @@ uint64_t taxi(int N)
     return taxiWalks * 2;
 }
 
-void upTo(int N)
+void upTo(int start, int end)
 {
-    for(int n = 15; n <= N; n += 4)
+    for(int n = start; n <= end; n += 4)
     {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        std::cout << "\nn=" << n << ":\n" << taxi(n) << std::endl;
+        std::cout << "\nn=" << n << ": " << taxi(n) << std::endl;
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         double totalTime = (double)(end - begin).count() / 1000000000.0;
         std::cout << "Total Time: " << totalTime << std::endl;
     }
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-//    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-//    std::cout << taxi(43) << std::endl;
-//    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-//    double totalTime = (double)(end - begin).count() / 1000000000.0;
-//    std::cout << "Total Time: " << totalTime << std::endl;
+    if(argc == 2)
+    {
+        int N = atoi(argv[1]);
+        upTo(N, N);
+    }
+    else if(argc == 3)
+    {
+        int start = atoi(argv[1]);
+        int end = atoi(argv[2]);
+        upTo(start, end);
+    }
 
-    upTo(43);
     return 0;
 }
