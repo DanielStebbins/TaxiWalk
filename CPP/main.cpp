@@ -252,9 +252,11 @@ uint64_t taxi(int N)
     return taxiWalks * 2;
 }
 
-void upTo(int start, int end)
+
+
+void upTo(int start, int stop)
 {
-    for(int n = start; n <= end; n += 4)
+    for(int n = start; n <= stop; n += 4)
     {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         std::cout << "\nn=" << n << ": " << taxi(n) << std::endl;
