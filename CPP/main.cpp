@@ -249,12 +249,26 @@ uint64_t taxi(int N)
     return taxiWalks * 2;
 }
 
+void upTo(int N)
+{
+    for(int n = 15; n <= N; n += 4)
+    {
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+        std::cout << "\nn=" << n << ":\n" << taxi(n) << std::endl;
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        double totalTime = (double)(end - begin).count() / 1000000000.0;
+        std::cout << "Total Time: " << totalTime << std::endl;
+    }
+}
+
 int main()
 {
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::cout << taxi(43) << std::endl;
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    double totalTime = (double)(end - begin).count() / 1000000000.0;
-    std::cout << "Total Time: " << totalTime << std::endl;
+//    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+//    std::cout << taxi(43) << std::endl;
+//    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+//    double totalTime = (double)(end - begin).count() / 1000000000.0;
+//    std::cout << "Total Time: " << totalTime << std::endl;
+
+    upTo(43);
     return 0;
 }
