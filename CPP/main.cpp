@@ -22,6 +22,26 @@ struct State {
         var1(length), var2(steps), children{nullptr,nullptr} {}
 };
 
+std::string toBinary(uint64_t n, uint16_t len)
+{
+    if(len == 0) {
+        return "Origin";
+    }
+    std::string binary;
+    for(uint16_t i = 0; i < len; i++)
+    {
+        if((n >> i) & 1)
+        {
+            binary += "V";
+        }
+        else
+        {
+            binary += "H";
+        }
+    }
+    return binary;
+}
+
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
 {
     int xStep = 1;
@@ -74,8 +94,59 @@ int approach(uint64_t steps, uint16_t length)
     return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 }
 
+// Used to remove the heuristic for computing the steps to the origin.
+//bool canReachOrigin(uint64_t steps, uint16_t length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
+//{
+////    std::cout << "can reach" << std::endl;
+//    if(endX == 0 && endY == 0)
+//    {
+//        return true;
+//    }
+//    if(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
+//    {
+//        return false;
+//    }
+//
+//    // Horizontal Step.
+//    bool horizontalCanReach = false;
+//    bool verticalCanReach = false;
+//    if(approach(steps, length) != 1 || length < 2)
+//    {
+//        int nextX = 0;
+//        int nextY = 0;
+//        getPoint(steps, length + 1, nextX, nextY);
+//        if(nextX == 0 && nextY == 0)
+//        {
+//            return true;
+//        }
+//        if(noLoop(steps, length + 1, nextX, nextY))
+//        {
+//            horizontalCanReach = canReachOrigin(steps, length + 1, nextX, nextY, n, stepsToOrigin);
+//        }
+//    }
+//
+//    if(approach(steps, length) != 2 || length < 2)
+//    {
+//        uint64_t nextSteps = steps | (1ULL << length);
+//        int nextX = 0;
+//        int nextY = 0;
+//        getPoint(nextSteps, length + 1, nextX, nextY);
+//        if(nextX == 0 && nextY == 0)
+//        {
+//            return true;
+//        }
+//        if(noLoop(nextSteps, length + 1, nextX, nextY))
+//        {
+//            verticalCanReach = canReachOrigin(nextSteps, length + 1, nextX, nextY, n, stepsToOrigin);
+//        }
+//    }
+//
+//    return horizontalCanReach || verticalCanReach;
+//}
+
 void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
 {
+//    while(!canReachOrigin(steps, length, endX, endY, n, stepsToOrigin))
     while(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
     {
         if(steps & 1)
@@ -163,6 +234,9 @@ std::vector<State> makeAutomaton(int n)
                     states[untreated].children[0] = parent.children[tempSteps];
                 }
             }
+            else {
+//                std::cout << toBinary(states[untreated].var2, states[untreated].var1) << std::endl;
+            }
         }
 
         // Vertical Step.
@@ -193,6 +267,9 @@ std::vector<State> makeAutomaton(int n)
                 {
                     states[untreated].children[1] = parent.children[tempSteps];
                 }
+            }
+            else {
+//                std::cout << toBinary(states[untreated].var2, states[untreated].var1) << std::endl;
             }
         }
         ++untreated;
@@ -238,6 +315,8 @@ uint64_t taxi(int N)
         }
     }
 
+//    std::cout <<"Number of states for length " << N << ": " << automaton.size() << std::endl;
+
     uint64_t taxiWalks = 0;
     for(auto & state : automaton)
     {
@@ -255,9 +334,6 @@ uint64_t taxi(int N)
     }
     return taxiWalks * 2;
 }
-
-
-
 
 void upTo(int start, int stop)
 {
@@ -284,6 +360,9 @@ int main(int argc, char *argv[])
         int end = atoi(argv[2]);
         upTo(start, end);
     }
+
+    int n = 43;
+    upTo(15, n);
 
     return 0;
 }
