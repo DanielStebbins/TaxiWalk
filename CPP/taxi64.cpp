@@ -360,9 +360,5 @@ int main(int argc, char *argv[])
         int end = atoi(argv[2]);
         upTo(start, end);
     }
-
-    int n = 43;
-    upTo(15, n);
-
     return 0;
 }
