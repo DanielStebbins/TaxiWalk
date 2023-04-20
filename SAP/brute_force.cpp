@@ -97,9 +97,6 @@ uint64_t taxi(int N) {
     uint64_t max = 1LL << N;
     while(current < max) {
         count += isTaxiPolygon(current, N);
-        if(isTaxiPolygon(current, N)) {
-            std::cout << toBinary(current, N) << std::endl;
-        }
         ++current;
     }
 

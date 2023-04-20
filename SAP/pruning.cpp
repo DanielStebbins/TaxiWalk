@@ -53,10 +53,19 @@ void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
     }
 }
 
-bool noLoop(uint64_t steps, uint16_t length)
+int approach(uint64_t steps, uint16_t length) {
+    return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
+}
+
+bool canTaxiPolygon(uint64_t steps, uint16_t length, int N, std::vector<int> const &stepsToOrigin)
 {
     int endX = 0, endY = 0;
     getPoint(steps, length, endX, endY);
+
+    // Not enough steps remaining to reach the origin.
+    if(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > N - length) {
+        return false;
+    }
     
     int x = 0;
     int xStep = 1;
@@ -83,10 +92,6 @@ bool noLoop(uint64_t steps, uint16_t length)
     return noLoop;
 }
 
-int approach(uint64_t steps, uint16_t length) {
-    return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
-}
-
 int isTaxiPolygon(uint64_t steps, int N) {
     // Return 0 if the two turn rule is violated around the connection.
     int first = steps & 1;
@@ -100,14 +105,27 @@ int isTaxiPolygon(uint64_t steps, int N) {
     // Ends on the origin -> taxi polygon. No earlier intersection guaranteed by checks on earlier walks.
     int x = 0, y = 0;
     getPoint(steps, N, x, y);
-    if(x == 0 && y == 0) {
-        std::cout << toBinary(steps, N) << std::endl;
-    }
     return x == 0 && y == 0;
+}
+
+std::vector<int> getStepsToOrigin()
+{
+    std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToOrigin.txt)");
+    std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
+    std::stringstream stream(content);
+    std::vector<int> stepsToOrigin;
+    int num;
+    while(stream >> num)
+    {
+        stepsToOrigin.push_back(num);
+    }
+    return stepsToOrigin;
 }
 
 uint64_t taxiPolygon(int N)
 {
+    std::vector<int> stepsToOrigin = getStepsToOrigin();
+
     std::vector<State> untreated;
     untreated.reserve(91355000);
 
@@ -130,7 +148,7 @@ uint64_t taxiPolygon(int N)
             if(length == N) {
                 count += isTaxiPolygon(steps, N);
             }
-            else if(noLoop(steps, length)) {
+            else if(canTaxiPolygon(steps, length, N, stepsToOrigin)) {
                 untreated.emplace_back(length, steps);
             }
         }
@@ -146,7 +164,7 @@ uint64_t taxiPolygon(int N)
                 count += isTaxiPolygon(steps, N);
             }
             else {
-                if(noLoop(steps, length)) {
+                if(canTaxiPolygon(steps, length, N, stepsToOrigin)) {
                     untreated.emplace_back(length, steps);
                 }
             }
@@ -158,10 +176,12 @@ uint64_t taxiPolygon(int N)
 
 void upTo(int start, int stop)
 {
-    for(int n = start; n <= stop; n += 4)
+    uint64_t totalUpTo = 0;
+    for(int n = start; n <= stop; n += 1)
     {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        std::cout << "\nn=" << n << ": " << taxiPolygon(n) << std::endl;
+        totalUpTo += taxiPolygon(n);
+        std::cout << "\nn=" << n << ": " << totalUpTo << std::endl;
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         double totalTime = (double)(end - begin).count() / 1000000000.0;
         std::cout << "Total Time: " << totalTime << std::endl;
