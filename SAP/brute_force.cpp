@@ -5,8 +5,28 @@
 #include <vector>
 #include <chrono>
 
+std::string toBinary(uint64_t n, uint16_t len)
+{
+    if(len == 0) {
+        return "Origin";
+    }
+    std::string binary;
+    for(uint16_t i = 0; i < len; i++)
+    {
+        if((n >> i) & 1)
+        {
+            binary += "V";
+        }
+        else
+        {
+            binary += "H";
+        }
+    }
+    return binary;
+}
+
 int isTaxiPolygon(uint64_t steps, int N) {
-    if((steps & 1) == 0) {
+    if((steps & 1) == 1) {
         return 0;
     }
 
@@ -63,12 +83,12 @@ int isTaxiPolygon(uint64_t steps, int N) {
     }
 
     // Get last point.
-    if(temp & 1) {
+    if(steps & 1) {
         y += yStep;
     } else {
         x += xStep;
     }
-    return (x << 16) + y == 0;
+    return x == 0 && y == 0;
 }
 
 uint64_t taxi(int N) {
@@ -77,6 +97,9 @@ uint64_t taxi(int N) {
     uint64_t max = 1LL << N;
     while(current < max) {
         count += isTaxiPolygon(current, N);
+        if(isTaxiPolygon(current, N)) {
+            std::cout << toBinary(current, N) << std::endl;
+        }
         ++current;
     }
 

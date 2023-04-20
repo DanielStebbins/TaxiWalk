@@ -100,6 +100,9 @@ int isTaxiPolygon(uint64_t steps, int N) {
     // Ends on the origin -> taxi polygon. No earlier intersection guaranteed by checks on earlier walks.
     int x = 0, y = 0;
     getPoint(steps, N, x, y);
+    if(x == 0 && y == 0) {
+        std::cout << toBinary(steps, N) << std::endl;
+    }
     return x == 0 && y == 0;
 }
 
@@ -109,7 +112,7 @@ uint64_t taxiPolygon(int N)
     untreated.reserve(91355000);
 
     // Start at H, length 1.
-    untreated.emplace_back(0b0, 1);
+    untreated.emplace_back(1, 0);
 
     uint64_t count = 0;
 
