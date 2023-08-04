@@ -293,7 +293,7 @@ uint64_t taxi(int N)
     automaton[1].var1 = 1;
 
     // Ends one step early, because on the final loop there's no need to move var2 to var1.
-    for(int n = 2; n < 60; ++n)
+    for(int n = 2; n < 95; ++n)
     {
         for(auto & state : automaton)
         {
@@ -301,7 +301,6 @@ uint64_t taxi(int N)
             {
                 if(state.children[0])
                 {
-                    if((*state.children[0]).var2 > INT_MAX)
                     (*state.children[0]).var2 += state.var1;
                 }
                 if(state.children[1])
