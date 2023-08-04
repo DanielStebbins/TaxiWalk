@@ -235,9 +235,6 @@ std::vector<State> makeAutomaton(int n)
                     states[untreated].children[0] = parent.children[tempSteps];
                 }
             }
-            // else {
-//                std::cout << toBinary(states[untreated].var2, states[untreated].var1) << std::endl;
-            // }
         }
 
         // Vertical Step.
@@ -269,9 +266,6 @@ std::vector<State> makeAutomaton(int n)
                     states[untreated].children[1] = parent.children[tempSteps];
                 }
             }
-            // else {
-//                std::cout << toBinary(states[untreated].var2, states[untreated].var1) << std::endl;
-            // }
         }
         ++untreated;
     }
