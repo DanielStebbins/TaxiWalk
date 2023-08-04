@@ -12,6 +12,7 @@
 #include <sstream>
 #include <vector>
 #include <chrono>
+#include <climits>
 
 struct State {
     uint64_t var1;
@@ -234,9 +235,9 @@ std::vector<State> makeAutomaton(int n)
                     states[untreated].children[0] = parent.children[tempSteps];
                 }
             }
-            else {
+            // else {
 //                std::cout << toBinary(states[untreated].var2, states[untreated].var1) << std::endl;
-            }
+            // }
         }
 
         // Vertical Step.
@@ -268,9 +269,9 @@ std::vector<State> makeAutomaton(int n)
                     states[untreated].children[1] = parent.children[tempSteps];
                 }
             }
-            else {
+            // else {
 //                std::cout << toBinary(states[untreated].var2, states[untreated].var1) << std::endl;
-            }
+            // }
         }
         ++untreated;
     }
@@ -292,7 +293,7 @@ uint64_t taxi(int N)
     automaton[1].var1 = 1;
 
     // Ends one step early, because on the final loop there's no need to move var2 to var1.
-    for(int n = 2; n < N; ++n)
+    for(int n = 2; n < 60; ++n)
     {
         for(auto & state : automaton)
         {
@@ -300,6 +301,7 @@ uint64_t taxi(int N)
             {
                 if(state.children[0])
                 {
+                    if((*state.children[0]).var2 > INT_MAX)
                     (*state.children[0]).var2 += state.var1;
                 }
                 if(state.children[1])
@@ -332,7 +334,7 @@ uint64_t taxi(int N)
             }
         }
     }
-    return taxiWalks * 2;
+    return taxiWalks << 1;
 }
 
 void upTo(int start, int stop)

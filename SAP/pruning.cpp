@@ -134,6 +134,8 @@ uint64_t taxiPolygon(int N)
 
     uint64_t count = 0;
 
+    uint64_t out = 0;
+
     while(!untreated.empty())
     {
         struct State current = untreated.back();
@@ -146,7 +148,11 @@ uint64_t taxiPolygon(int N)
 
             // This walk is finished, check if it's a polygon and follows the two-turn rule at the connection.
             if(length == N) {
-                count += isTaxiPolygon(steps, N);
+                int is = isTaxiPolygon(steps, N);
+                if(is && count == 5384903) {
+                    out = steps;
+                }
+                count += is;
             }
             else if(canTaxiPolygon(steps, length, N, stepsToOrigin)) {
                 untreated.emplace_back(length, steps);
@@ -161,7 +167,11 @@ uint64_t taxiPolygon(int N)
 
             // This walk is finished, check if it's a polygon and follows the two-turn rule at the connection.
             if(length == N) {
-                count += isTaxiPolygon(steps, N);
+                int is = isTaxiPolygon(steps, N);
+                if(is && count == 5384903) {
+                    out = steps;
+                }
+                count += is;
             }
             else {
                 if(canTaxiPolygon(steps, length, N, stepsToOrigin)) {
@@ -170,18 +180,15 @@ uint64_t taxiPolygon(int N)
             }
         }
     }
-
+    std::cout << toBinary(out, N) << std::endl;
     return count * 2;
 }
 
-void upTo(int start, int stop)
-{
-    uint64_t totalUpTo = 0;
+void upTo(int start, int stop) {
     for(int n = start; n <= stop; n += 1)
     {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        totalUpTo += taxiPolygon(n);
-        std::cout << "\nn=" << n << ": " << totalUpTo << std::endl;
+        std::cout << "\nn=" << n << ": " << taxiPolygon(n) << std::endl;
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         double totalTime = (double)(end - begin).count() / 1000000000.0;
         std::cout << "Total Time: " << totalTime << std::endl;

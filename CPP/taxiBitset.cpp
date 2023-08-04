@@ -13,16 +13,20 @@
 #include <vector>
 #include <chrono>
 
+#include <boost/multiprecision/cpp_int.hpp>
+
+using namespace boost::multiprecision;
+
 struct State {
-    uint64_t var1;
-    uint64_t var2;
+    uint128_t var1;
+    uint128_t var2;
     State *children[2]{};
 
-    State(uint16_t length, uint64_t steps):
+    State(uint128_t length, uint128_t steps):
         var1(length), var2(steps), children{nullptr,nullptr} {}
 };
 
-std::string toBinary(uint64_t n, uint16_t len)
+std::string toBinary(uint128_t n, uint128_t len)
 {
     if(len == 0) {
         return "Origin";
@@ -42,7 +46,7 @@ std::string toBinary(uint64_t n, uint16_t len)
     return binary;
 }
 
-void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
+void getPoint(uint128_t steps, uint128_t length, int &x, int &y)
 {
     int xStep = 1;
     int yStep = 1;
@@ -62,7 +66,7 @@ void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
     }
 }
 
-bool noLoop(uint64_t steps, uint16_t length, int endX, int endY)
+bool noLoop(uint128_t steps, uint128_t length, int endX, int endY)
 {
     int x = 0;
     int xStep = 1;
@@ -89,9 +93,9 @@ bool noLoop(uint64_t steps, uint16_t length, int endX, int endY)
     return noLoop;
 }
 
-int approach(uint64_t steps, uint16_t length)
+int approach(uint128_t steps, uint128_t length)
 {
-    return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
+    return (int) ((steps >> ((uint16_t) length - 2) & 1) * 2 + (steps >> ((uint16_t)length - 1)));
 }
 
 // Used to remove the heuristic for computing the steps to the origin.
@@ -144,7 +148,7 @@ int approach(uint64_t steps, uint16_t length)
 //    return horizontalCanReach || verticalCanReach;
 //}
 
-void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
+void reduce(uint128_t &steps, uint128_t &length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
 {
 //    while(!canReachOrigin(steps, length, endX, endY, n, stepsToOrigin))
     while(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
@@ -234,9 +238,9 @@ std::vector<State> makeAutomaton(int n)
                     states[untreated].children[0] = parent.children[tempSteps];
                 }
             }
-            else {
+            // else {
 //                std::cout << toBinary(states[untreated].var2, states[untreated].var1) << std::endl;
-            }
+            // }
         }
 
         // Vertical Step.
