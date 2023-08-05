@@ -1,11 +1,3 @@
-// Runs N=47 in 12 seconds using 0.5GB.
-// Runs N=51 in 73 seconds using 2.8GB.
-
-// Predictions (Time x1.58 (x6.2 per 4), Space x1.53 (x5.5 per 4)):
-// N=55: 7m45s, 16GB.
-// N=59: 48m, 87GB.
-// N=63: 5h, 482GB.
-
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -115,14 +107,12 @@ struct BigSum {
 };
 
 struct State {
-    uint64_t var1;
-    uint64_t var2;
+    BigSum var1;
+    BigSum var2;
     State *children[2]{};
-    BigSum count1;
-    BigSum count2;
 
-    State(uint16_t length, uint64_t steps):
-        var1(length), var2(steps), children{nullptr,nullptr}, count1(0), count2(0) {}
+    State(uint64_t length, uint64_t steps):
+        var1(length), var2(steps), children{nullptr,nullptr} {}
 };
 
 
@@ -239,10 +229,10 @@ std::vector<State> makeAutomaton(int n)
     while(untreated < states.size())
     {
         // Horizontal Step.
-        if(approach(states[untreated].var2, states[untreated].var1) != 1 || states[untreated].var1 < 2)
+        if(approach(states[untreated].var2.segments[0], states[untreated].var1.segments[0]) != 1 || states[untreated].var1.segments[0] < 2)
         {
-            uint16_t length = states[untreated].var1 + 1;
-            uint64_t steps = states[untreated].var2;
+            uint16_t length = states[untreated].var1.segments[0] + 1;
+            uint64_t steps = states[untreated].var2.segments[0];
 
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
@@ -271,10 +261,10 @@ std::vector<State> makeAutomaton(int n)
         }
 
         // Vertical Step.
-        if(approach(states[untreated].var2, states[untreated].var1) != 2 || states[untreated].var1 < 2)
+        if(approach(states[untreated].var2.segments[0], states[untreated].var1.segments[0]) != 2 || states[untreated].var1.segments[0] < 2)
         {
-            uint16_t length = states[untreated].var1 + 1;
-            uint64_t steps = states[untreated].var2 | (1ULL << states[untreated].var1);
+            uint16_t length = states[untreated].var1.segments[0] + 1;
+            uint64_t steps = states[untreated].var2.segments[0] | (1ULL << states[untreated].var1.segments[0]);
 
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
@@ -303,12 +293,12 @@ std::vector<State> makeAutomaton(int n)
         ++untreated;
     }
 
-    // Reset first 16 bytes to use when running the automaton.
-    // for(auto & state : states)
-    // {
-    //     state.var1 = 0;
-    //     state.var2 = 0;
-    // }
+    // Reset each state's number variables so they're no longer pattern and length, instead automaton iteration counts.
+    for(auto & state : states)
+    {
+        state.var1 = 0;
+        state.var2 = 0;
+    }
     return states;
 }
 
@@ -319,29 +309,29 @@ BigSum taxi(int automaton_size, int num_iterations)
     std::cout << "Automaton Generated." << std::endl;
 
     // Sets "H" to current count 1.
-    automaton[1].count1 = 1;
+    automaton[1].var1 = 1;
 
-    // Ends one step early, because on the final loop there's no need to move count2 to count1.
+    // Ends one step early, because on the final loop there's no need to move var2 to var1.
     for(int n = 2; n < num_iterations; ++n)
     {
         for(auto & state : automaton)
         {
-            if(state.count1)
+            if(state.var1)
             {
                 if(state.children[0])
                 {
-                    (*state.children[0]).count2 += state.count1;
+                    (*state.children[0]).var2 += state.var1;
                 }
                 if(state.children[1])
                 {
-                    (*state.children[1]).count2 += state.count1;
+                    (*state.children[1]).var2 += state.var1;
                 }
             }
         }
         for(auto & state : automaton)
         {
-            state.count1 = state.count2;
-            state.count2 = 0;
+            state.var1 = state.var2;
+            state.var2 = 0;
         }
 
         if((n + 1) % 50 == 0) {
@@ -349,15 +339,15 @@ BigSum taxi(int automaton_size, int num_iterations)
             BigSum taxiWalks = 0;
             for(auto & state : automaton)
             {
-                if(state.count1)
+                if(state.var1)
                 {
                     if(state.children[0])
                     {
-                        taxiWalks += state.count1;
+                        taxiWalks += state.var1;
                     }
                     if(state.children[1])
                     {
-                        taxiWalks += state.count1;
+                        taxiWalks += state.var1;
                     }
                 }
             }
@@ -371,15 +361,15 @@ BigSum taxi(int automaton_size, int num_iterations)
     // BigSum taxiWalks = 0;
     // for(auto & state : automaton)
     // {
-    //     if(state.count1)
+    //     if(state.var1)
     //     {
     //         if(state.children[0])
     //         {
-    //             taxiWalks += state.count1;
+    //             taxiWalks += state.var1;
     //         }
     //         if(state.children[1])
     //         {
-    //             taxiWalks += state.count1;
+    //             taxiWalks += state.var1;
     //         }
     //     }
     // }
@@ -402,6 +392,7 @@ void run(int automaton_size, int num_iterations)
 
 int main(int argc, char *argv[])
 {
+    // Automaton size must not be more than 63 because the automaton generator still uses only 64 bits of each state's variables.
     if(argc == 2)
     {
         int N = atoi(argv[1]);
