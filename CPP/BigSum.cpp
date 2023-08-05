@@ -63,12 +63,12 @@ struct BigSum {
             // if(result.segments[i] > ULLONG_MAX - carry - (i < segments.size() ? segments[i] : 0)) {
             //     std::cout << "OVERFLOW: " << carry << " + " << segments[i] << " + " <<  other.segments[i] << std::endl;
             // }
+            uint64_t previous_value = result.segments[i];
             result.segments[i] += carry + (i < segments.size() ? segments[i] : 0);
-            carry = result.segments[i] >= max_bit;
+            carry = result.segments[i] < previous_value;
             // if(carry) {
             //     std::cout << "CARRY: " << carry << " + " << segments[i] << " + " <<  other.segments[i] << std::endl;
             // }
-            result.segments[i] &= ~max_bit;
         }
         return result;
 	}
@@ -87,7 +87,7 @@ struct BigSum {
         } else {
             std::string out = "";
             for(int i = segments.size() - 1; i >= 0; --i) {
-			    out += toBinary(segments[i], 63);
+			    out += toBinary(segments[i], 64);
             }
 
             // Avoid leading 0s.
