@@ -287,7 +287,8 @@ uint64_t taxi(int N)
     automaton[1].var1 = 1;
 
     // Ends one step early, because on the final loop there's no need to move var2 to var1.
-    for(int n = 2; n < 95; ++n)
+    // uint64_t limit = 1ULL << 63;
+    for(int n = 2; n < 94; ++n)
     {
         for(auto & state : automaton)
         {
@@ -308,10 +309,41 @@ uint64_t taxi(int N)
             state.var1 = state.var2;
             state.var2 = 0;
         }
+        
+        // uint64_t taxiWalks = 0;
+        // for(auto & state : automaton)
+        // {
+        //     if(state.var1)
+        //     {
+        //         if(state.children[0])
+        //         {
+        //             if(taxiWalks > ULLONG_MAX - state.var1) {
+        //                 return n + 1;
+        //             }
+        //             taxiWalks += state.var1;
+        //             // if(taxiWalks >= limit) {
+        //             //     return n + 1;
+        //             // }
+        //         }
+        //         if(state.children[1])
+        //         {
+        //             if(taxiWalks > ULLONG_MAX - state.var1) {
+        //                 return n + 1;
+        //             }
+        //             taxiWalks += state.var1;
+        //             // if(taxiWalks >= limit) {
+        //             //     return n + 1;
+        //             // }
+        //         }
+        //     }
+        // }
+        // if(taxiWalks > ULLONG_MAX / 2) {
+        //     return n + 1;
+        // } 
+        // std::cout << "n=" << n + 1 << ": " << taxiWalks * 2 << std::endl;
     }
-
+    // return 0;
 //    std::cout <<"Number of states for length " << N << ": " << automaton.size() << std::endl;
-
     uint64_t taxiWalks = 0;
     for(auto & state : automaton)
     {
@@ -320,10 +352,16 @@ uint64_t taxi(int N)
             if(state.children[0])
             {
                 taxiWalks += state.var1;
+                // if(taxiWalks >= limit) {
+                //     return n;
+                // }
             }
             if(state.children[1])
             {
                 taxiWalks += state.var1;
+                // if(taxiWalks >= limit) {
+                //     return n;
+                // }
             }
         }
     }

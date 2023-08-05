@@ -14,84 +14,103 @@
 #include <chrono>
 #include <climits>
 
-#include <bits/stdc++.h>
-
-// Based on https://codeforces.com/blog/entry/22566.
-// Must be a power of 2 for the % base to & (base - 1) trick to work.
-// const uint64_t base = 1ULL << 62;
-// const uint64_t base_exponent = 62;
-
-// // Number of base-10 digits in 1ULL << 62 ???
-// const int base_digits = 62;
-
-const uint64_t base = 1000000000000;
-const int base_digits = 12;
-struct BigUnsigned {
-    std::vector<uint64_t> parts;
-
-    BigUnsigned(uint64_t initial) {
-		*this = initial;
-	}
-
-    void operator=(uint64_t v) {
-		parts.clear();
-		for (; v > 0; v = v / base)
-			parts.push_back(v % base);
-	}
-
-    BigUnsigned operator+(const BigUnsigned &v) const {
-        BigUnsigned res = v;
-
-        for (int i = 0, carry = 0; i < std::max(parts.size(), v.parts.size()) || carry; ++i) {
-            if (i == res.parts.size())
-                res.parts.push_back(0);
-            res.parts[i] += carry + (i < parts.size() ? parts[i] : 0);
-            carry = res.parts[i] >= base;
-            if (carry)
-                res.parts[i] -= base;
+std::string toBinary(uint64_t n, uint16_t len)
+{
+    if(len == 0) {
+        return "Origin";
+    }
+    std::string binary;
+    for(uint16_t i = 0; i < len; i++)
+    {
+        if((n >> (len - 1 - i)) & 1)
+        {
+            binary += "1";
         }
-        return res;
+        else
+        {
+            binary += "0";
+        }
+    }
+    return binary;
+}
+
+// Bits go right to left, segments go left to right.
+const uint64_t max_bit = 1ULL << 63;
+struct BigSum {
+    std::vector<uint64_t> segments;
+    
+    BigSum(uint64_t value = 0) {
+        segments.push_back(value);
+        if(segments[0] & max_bit) {
+            segments[0] &= ~max_bit;
+            segments.push_back(1);
+            std::cout << "BigSum created with carry." << std::endl;
+        }
+    }
+
+    void operator=(const BigSum &other) {
+		segments = other.segments;
+	}
+ 
+	void operator=(uint64_t value) {
+		segments.clear();
+		segments.push_back(value);
+        if(segments[0] & max_bit) {
+            segments[0] &= ~max_bit;
+            segments.push_back(1);
+            std::cout << "BigSum assigned with carry." << std::endl;
+        }
 	}
 
-    void operator+=(const BigUnsigned &v) {
-		*this = *this + v;
+    BigSum operator+(const BigSum &other) const {
+        BigSum result = other;
+        for(int i = 0, carry = 0; i < std::max(segments.size(), other.segments.size()) || carry; ++i) {
+            if(i == result.segments.size()) {
+                result.segments.push_back(0);
+            }
+            // if(result.segments[i] > ULLONG_MAX - carry - (i < segments.size() ? segments[i] : 0)) {
+            //     std::cout << "OVERFLOW: " << carry << " + " << segments[i] << " + " <<  other.segments[i] << std::endl;
+            // }
+            result.segments[i] += carry + (i < segments.size() ? segments[i] : 0);
+            carry = result.segments[i] >= max_bit;
+            // if(carry) {
+            //     std::cout << "CARRY: " << carry << " + " << segments[i] << " + " <<  other.segments[i] << std::endl;
+            // }
+            result.segments[i] &= ~max_bit;
+        }
+        return result;
 	}
 
-    bool isZero() const {
-		return parts.empty() || (parts.size() == 1 && !parts[0]);
+    void operator+=(const BigSum &other) {
+		*this = *this + other;
 	}
 
-    // BigUnsigned operator+(const uint64_t &v) const {
-    //     BigUnsigned res = v;
+    operator bool() {
+        return segments.size() > 1 || (segments.size() == 1 && segments[0] != 0ULL);
+    }
 
-    //     for (int i = 0, carry = 0; i < parts.size() || carry; ++i) {
-    //         if (i == res.parts.size())
-    //             res.parts.push_back(0);
-    //         res.parts[i] += carry + (i < parts.size() ? parts[i] : 0);
-    //         carry = res.parts[i] >= base;
-    //         if (carry)
-    //             res.parts[i] -= base;
-    //     }
-    //     return res;
-	// }
+    std::string to_string() const {
+        if(segments.empty()) {
+            return "Empty!";
+        } else {
+            std::string out = "";
+            for(int i = segments.size() - 1; i >= 0; --i) {
+			    out += toBinary(segments[i], 63);
+            }
 
-    // void operator+=(const uint64_t &v) {
-	// 	*this = *this + v;
-	// }
+            // Avoid leading 0s.
+            int i = 0;
+            while(i < out.length() && out[i] == '0') {
+                ++i;
+            }
+            return out.substr(i);
+            return out;
+        }
+    }
 
-    std::string to_string(){
-		std::stringstream ss;
-		ss << *this;
-		std::string s;
-		ss >> s;
-		return s;
-	}
-
-	friend std::ostream& operator<<(std::ostream &stream, const BigUnsigned &v) {
-		stream << (v.parts.empty() ? 0 : v.parts.back());
-		for (int i = v.parts.size() - 2; i >= 0; --i)
-			stream << std::setw(base_digits) << std::setfill('0') << v.parts[i];
-		return stream;
+    friend std::ostream& operator<<(std::ostream &stream, const BigSum &bigsum) {
+        stream << bigsum.to_string();
+        return stream;
 	}
 };
 
@@ -99,32 +118,14 @@ struct State {
     uint64_t var1;
     uint64_t var2;
     State *children[2]{};
-    BigUnsigned count1;
-    BigUnsigned count2;
+    BigSum count1;
+    BigSum count2;
 
     State(uint16_t length, uint64_t steps):
         var1(length), var2(steps), children{nullptr,nullptr}, count1(0), count2(0) {}
 };
 
-// std::string toBinary(uint64_t n, uint16_t len)
-// {
-//     if(len == 0) {
-//         return "Origin";
-//     }
-//     std::string binary;
-//     for(uint16_t i = 0; i < len; i++)
-//     {
-//         if((n >> i) & 1)
-//         {
-//             binary += "V";
-//         }
-//         else
-//         {
-//             binary += "H";
-//         }
-//     }
-//     return binary;
-// }
+
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
 {
@@ -178,59 +179,8 @@ int approach(uint64_t steps, uint16_t length)
     return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 }
 
-// Used to remove the heuristic for computing the steps to the origin.
-//bool canReachOrigin(uint64_t steps, uint16_t length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
-//{
-////    std::cout << "can reach" << std::endl;
-//    if(endX == 0 && endY == 0)
-//    {
-//        return true;
-//    }
-//    if(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
-//    {
-//        return false;
-//    }
-//
-//    // Horizontal Step.
-//    bool horizontalCanReach = false;
-//    bool verticalCanReach = false;
-//    if(approach(steps, length) != 1 || length < 2)
-//    {
-//        int nextX = 0;
-//        int nextY = 0;
-//        getPoint(steps, length + 1, nextX, nextY);
-//        if(nextX == 0 && nextY == 0)
-//        {
-//            return true;
-//        }
-//        if(noLoop(steps, length + 1, nextX, nextY))
-//        {
-//            horizontalCanReach = canReachOrigin(steps, length + 1, nextX, nextY, n, stepsToOrigin);
-//        }
-//    }
-//
-//    if(approach(steps, length) != 2 || length < 2)
-//    {
-//        uint64_t nextSteps = steps | (1ULL << length);
-//        int nextX = 0;
-//        int nextY = 0;
-//        getPoint(nextSteps, length + 1, nextX, nextY);
-//        if(nextX == 0 && nextY == 0)
-//        {
-//            return true;
-//        }
-//        if(noLoop(nextSteps, length + 1, nextX, nextY))
-//        {
-//            verticalCanReach = canReachOrigin(nextSteps, length + 1, nextX, nextY, n, stepsToOrigin);
-//        }
-//    }
-//
-//    return horizontalCanReach || verticalCanReach;
-//}
-
 void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
 {
-//    while(!canReachOrigin(steps, length, endX, endY, n, stepsToOrigin))
     while(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
     {
         if(steps & 1)
@@ -354,7 +304,6 @@ std::vector<State> makeAutomaton(int n)
     }
 
     // Reset first 16 bytes to use when running the automaton.
-    // Remove if pattern becomes separated from running count.
     // for(auto & state : states)
     // {
     //     state.var1 = 0;
@@ -363,19 +312,21 @@ std::vector<State> makeAutomaton(int n)
     return states;
 }
 
-uint64_t taxi(int N)
+BigSum taxi(int automaton_size, int num_iterations)
 {
-    std::vector<State> automaton = makeAutomaton(N);
+    std::vector<State> automaton = makeAutomaton(automaton_size);
+
+    std::cout << "Automaton Generated." << std::endl;
 
     // Sets "H" to current count 1.
     automaton[1].count1 = 1;
 
-    // Ends one step early, because on the final loop there's no need to move var2 to var1.
-    for(int n = 2; n < 95; ++n)
+    // Ends one step early, because on the final loop there's no need to move count2 to count1.
+    for(int n = 2; n < num_iterations; ++n)
     {
         for(auto & state : automaton)
         {
-            if(!state.count1.isZero())
+            if(state.count1)
             {
                 if(state.children[0])
                 {
@@ -392,15 +343,18 @@ uint64_t taxi(int N)
             state.count1 = state.count2;
             state.count2 = 0;
         }
-    }
 
-//    std::cout <<"Number of states for length " << N << ": " << automaton.size() << std::endl;
+        if(n % 10 == 0) {
+            std::cout << "Completed iteration " << n << " of " << num_iterations << "." << std::endl;
+        }
+    }    
 
-    BigUnsigned taxiWalks = 0;
-    // uint64_t taxiWalks = 0;
+    std::cout << "Computing final sum..." << std::endl;
+
+    BigSum taxiWalks = 0;
     for(auto & state : automaton)
     {
-        if(!state.count1.isZero())
+        if(state.count1)
         {
             if(state.children[0])
             {
@@ -412,42 +366,35 @@ uint64_t taxi(int N)
             }
         }
     }
-    std::cout << taxiWalks << std::endl;
-    return 0;
-    // return taxiWalks << 1;
+    return taxiWalks;
 }
 
-void upTo(int start, int stop)
+void run(int automaton_size, int num_iterations)
 {
-    for(int n = start; n <= stop; n += 4)
-    {
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        std::cout << "\nn=" << n << ": " << taxi(n) << std::endl;
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        double totalTime = (double)(end - begin).count() / 1000000000.0;
-        std::cout << "Total Time: " << totalTime << std::endl;
-    }
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+    BigSum t = taxi(automaton_size, num_iterations);
+
+    // << '0' << is to "multiply by 2". Only works for binary outputs.
+    std::cout << "\nA=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
+    
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    double totalTime = (double)(end - begin).count() / 1000000000.0;
+    std::cout << "Total Time: " << totalTime << std::endl;
 }
 
 int main(int argc, char *argv[])
 {
-    // BigUnsigned x = 1ULL << 63;
-    // BigUnsigned y = 4083094823042ULL;
-    // x += x;
-    // x += x;
-    // x += x;
-    // x += x;
-    // std::cout << x << std::endl;
     if(argc == 2)
     {
         int N = atoi(argv[1]);
-        upTo(N, N);
+        run(N, N);
     }
     else if(argc == 3)
     {
-        int start = atoi(argv[1]);
-        int end = atoi(argv[2]);
-        upTo(start, end);
+        int automaton_size = atoi(argv[1]);
+        int num_iterations = atoi(argv[2]);
+        run(automaton_size, num_iterations);
     }
     return 0;
 }
