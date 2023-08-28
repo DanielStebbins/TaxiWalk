@@ -1,31 +1,55 @@
 package taxi;
 
-public class State implements Comparable<State>
+public class State
 {
-	public Pattern pattern;
+	public long steps;
+	public byte length;
 	public State horizontal;
 	public State vertical;
+	public int index;
 	
-	// For the red-black tree (red = true, black = false).
-	public boolean color;
-	public State parent;
-	public State left;
-	public State right;
-	
-	public State(Pattern pattern)
+	public State(long steps, byte length)
 	{
-		this.pattern = pattern;
-	}
-
-	@Override
-	public int compareTo(State o)
-	{
-		return pattern.compareTo(o.pattern);
+		this.steps = steps;
+		this.length = length;
 	}
 	
 	@Override
 	public String toString()
 	{
-		return "\"" + pattern + "\"";
+	    if(length == 0) {
+	        return "Origin";
+	    }
+	    String binary = "";
+	    for(byte i = 0; i < length; i++)
+	    {
+	    	if(((steps >> i) & 1) == 1)
+	    	{
+	    		binary += "V";
+	    	}
+	    	else
+	    	{
+	    		binary += "H";
+	    	}
+	    }
+//	    for (long i = (1L << (length - 1)); i > 0; i = i / 2) {
+//	        binary += ((steps & i) == 1L) ? "1" : "0";
+//	    }
+	    return binary;
+		
+//		// Prints left to right, opposite of how it's stored.
+//		String binaryString = "";
+//		for(int i = 0; i < length; i++)
+//		{
+//			if(((steps >>> i) & 1) == 1)
+//			{
+//				binaryString += "V";
+//			}
+//			else
+//			{
+//				binaryString += "H";
+//			}
+//		}
+//		return "Length: " + length + ", " + binaryString;
 	}
 }
