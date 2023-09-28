@@ -334,46 +334,46 @@ BigSum taxi(int automaton_size, int num_iterations)
             state.var2 = 0;
         }
 
-        if((n + 1) % 50 == 0) {
+        // if((n + 1) % 50 == 0) {
             // std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << "." << std::endl;
-            BigSum taxiWalks = 0;
-            for(auto & state : automaton)
+            // BigSum taxiWalks = 0;
+            // for(auto & state : automaton)
+            // {
+            //     if(state.var1)
+            //     {
+            //         if(state.children[0])
+            //         {
+            //             taxiWalks += state.var1;
+            //         }
+            //         if(state.children[1])
+            //         {
+            //             taxiWalks += state.var1;
+            //         }
+            //     }
+            // }
+            // std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
+        // }
+    }
+    // return 0;
+
+    std::cout << "Computing final sum..." << std::endl;
+
+    BigSum taxiWalks = 0;
+    for(auto & state : automaton)
+    {
+        if(state.var1)
+        {
+            if(state.children[0])
             {
-                if(state.var1)
-                {
-                    if(state.children[0])
-                    {
-                        taxiWalks += state.var1;
-                    }
-                    if(state.children[1])
-                    {
-                        taxiWalks += state.var1;
-                    }
-                }
+                taxiWalks += state.var1;
             }
-            std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
+            if(state.children[1])
+            {
+                taxiWalks += state.var1;
+            }
         }
     }
-    return 0;
-
-    // std::cout << "Computing final sum..." << std::endl;
-
-    // BigSum taxiWalks = 0;
-    // for(auto & state : automaton)
-    // {
-    //     if(state.var1)
-    //     {
-    //         if(state.children[0])
-    //         {
-    //             taxiWalks += state.var1;
-    //         }
-    //         if(state.children[1])
-    //         {
-    //             taxiWalks += state.var1;
-    //         }
-    //     }
-    // }
-    // return taxiWalks;
+    return taxiWalks;
 }
 
 void run(int automaton_size, int num_iterations)
@@ -383,7 +383,7 @@ void run(int automaton_size, int num_iterations)
     BigSum t = taxi(automaton_size, num_iterations);
 
     // << '0' << is to "multiply by 2". Only works for binary outputs.
-    // std::cout << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
+    std::cout << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
