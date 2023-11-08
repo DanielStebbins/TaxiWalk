@@ -86,48 +86,7 @@ int approach(uint64_t steps, uint16_t length)
     return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 }
 
-int equalSteps(uint64_t steps, uint16_t length) {
-    int xStep = 1;
-    int yStep = 1;
-    // int directions[4] = {0};
-    int right = 0;
-    int left = 0;
-    int up = 0;
-    int down = 0;
-    for(int i = 0; i < length; ++i)
-    {
-        if(steps & 1)
-        {
-            // directions[0] += (yStep == 1);
-            // directions[1] += (yStep == -1);
-            up += (yStep == 1);
-            down += (yStep == -1);
-            xStep = -xStep;
-        }
-        else
-        {
-            // directions[2] += (xStep == 1);
-            // directions[3] += (xStep == -1);
-            right += (xStep == 1);
-            left += (xStep == -1);
-            yStep = -yStep;
-        }
-        steps >>= 1;
-    }
-    // bool test1 = right == left || right == up || right == down || left == up || left == down || up == down;
-    // std::sort(directions, directions + (sizeof(directions) / sizeof(directions[0])));
-    // bool test2 = directions[0] == directions[1] || directions[2] == directions[3];
-
-    // if(test1 != test2) {
-    //     std::cout << "PRE:" << up << " " << down << " " << right << " " << left << " " << std::endl;
-    //     std::cout << "POST:" << directions[0] << " " << directions[1] << " " << directions[2] << " " << directions[3] << " " << std::endl;
-    // }
-    // return directions[0] == directions[1] || directions[2] == directions[3];
-
-    return right == left || right == up || right == down || left == up || left == down || up == down;
-}
-
-bool canEqualSteps(uint64_t steps, uint16_t length, int N, int endX, int endY)
+bool notAllDirections(uint64_t steps, uint16_t length, int N, int endX, int endY)
 {
     int x = 0;
     int xStep = 1;
@@ -139,21 +98,20 @@ bool canEqualSteps(uint64_t steps, uint16_t length, int N, int endX, int endY)
     int up = 0;
     int down = 0;
     int i = 0;
-    uint64_t temp = steps;
     while(noLoop && i < length-1)
     {
         if(steps & 1)
         {
             y += yStep;
-            up += (yStep == 1);
-            down += (yStep == -1);
+            up |= (yStep == 1);
+            down |= (yStep == -1);
             xStep = -xStep;
         }
         else
         {
             x += xStep;
-            right += (xStep == 1);
-            left += (xStep == -1);
+            right |= (xStep == 1);
+            left |= (xStep == -1);
             yStep = -yStep;
         }
         noLoop = x != endX || y != endY;
@@ -161,21 +119,13 @@ bool canEqualSteps(uint64_t steps, uint16_t length, int N, int endX, int endY)
         ++i;
     }
     if(steps & 1) {
-        up += (yStep == 1);
-        down += (yStep == -1);
+        up |= (yStep == 1);
+        down |= (yStep == -1);
     } else {
-        right += (xStep == 1);
-        left += (xStep == -1);
+        right |= (xStep == 1);
+        left |= (xStep == -1);
     }
-
-    // std::cout << "PRE:" << up << " " << down << " " << right << " " << left << " " << std::endl;
-    // int remaining = N - length;
-    // bool out = abs(right - left) <= remaining || abs(right - up) <= remaining|| abs(right - down) <= remaining || abs(left - up) <= remaining || abs(left - down) <= remaining || abs(up - down) <= remaining;
-    // std::cout << toBinary(temp, length) << " has " << remaining << ". Can make equal? " << out << std::endl;
-    // if(!out && remaining > 3) {
-    //     std::cout << "Gasp!" << std::endl;
-    // }
-    return noLoop && std::min({abs(right - left), abs(right - up), abs(right - down), abs(left - up), abs(left - down), abs(up - down)}) <= N - length;
+    return noLoop && (!right || !left || !up || !down);
 }
 
 std::vector<int> getStepsToOrigin()
@@ -192,7 +142,7 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
-uint64_t islandTaxi(int N)
+uint64_t generate(int N)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
 
@@ -222,7 +172,7 @@ uint64_t islandTaxi(int N)
             // } else {
             //     check = noLoop(steps, length, x, y);
             // }
-            if((N - length < 5 && canEqualSteps(steps, length, N, x, y)) || (N - length >= 5 && noLoop(steps, length, x, y))) {
+            if(notAllDirections(steps, length, N, x, y)) {
                 if(length == N) {
                     ++count;
                 } else {
@@ -245,7 +195,7 @@ uint64_t islandTaxi(int N)
             // } else {
             //     check = noLoop(steps, length, x, y);
             // }
-            if((N - length < 5 && canEqualSteps(steps, length, N, x, y)) || (N - length >= 5 && noLoop(steps, length, x, y))) {
+            if(notAllDirections(steps, length, N, x, y)) {
                 if(length == N) {
                     ++count;
                 } else {
@@ -261,8 +211,8 @@ void upTo(int start, int stop) {
     for(int n = start; n <= stop; n += 1)
     {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        std::cout << "\nn=" << n << ": " << islandTaxi(n) << std::endl;
-        // std::cout << islandTaxi(n) << std::endl;
+        std::cout << "\nn=" << n << ": " << generate(n) << std::endl;
+        // std::cout << generate(n) << std::endl;
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         double totalTime = (double)(end - begin).count() / 1000000000.0;
         std::cout << "Total Time: " << totalTime << std::endl;

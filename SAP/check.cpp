@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <chrono>
+#include <set>
 
 struct State {
     uint16_t length;
@@ -81,6 +82,34 @@ bool noLoop(uint64_t steps, uint16_t length, int endX, int endY)
     return noLoop;
 }
 
+bool entireNoLoop(uint64_t steps, uint16_t length)
+{
+    std::set<std::pair<int, int>> points;
+    points.insert(std::make_pair(0, 0));
+    int x = 0;
+    int xStep = 1;
+    int y = 0;
+    int yStep = 1;
+    bool noLoop = true;
+    int i = 0;
+    while(noLoop && i < length)
+    {
+        if(steps & 1) {
+            y += yStep;
+            xStep = -xStep;
+        } else {
+            x += xStep;
+            yStep = -yStep;
+        }
+        std::pair<int, int> temp = std::make_pair(x, y);
+        noLoop = !points.count(temp);
+        points.insert(temp);
+        steps >>= 1;
+        ++i;
+    }
+    return noLoop;
+}
+
 int approach(uint64_t steps, uint16_t length)
 {
     return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
@@ -143,8 +172,6 @@ int equalSteps(uint64_t steps, uint16_t length) {
     // return directions[0] == directions[1] || directions[2] == directions[3];
 
     return right == left || right == up || right == down || left == up || left == down || up == down;
-
-    // return !right || !left || !up || !down;
 }
 
 bool canEqualSteps(uint64_t steps, uint16_t length, int N)
@@ -176,9 +203,6 @@ bool canEqualSteps(uint64_t steps, uint16_t length, int N)
     int remaining = N - length;
     // bool out = abs(right - left) <= remaining || abs(right - up) <= remaining|| abs(right - down) <= remaining || abs(left - up) <= remaining || abs(left - down) <= remaining || abs(up - down) <= remaining;
     // std::cout << toBinary(temp, length) << " has " << remaining << ". Can make equal? " << out << std::endl;
-    // if(!out && remaining > 3) {
-    //     std::cout << "Gasp!" << std::endl;
-    // }
     return abs(right - left) <= remaining || abs(right - up) <= remaining|| abs(right - down) <= remaining || abs(left - up) <= remaining || abs(left - down) <= remaining || abs(up - down) <= remaining;
 }
 
@@ -225,6 +249,31 @@ bool canDoublePolygon(int endX, int endY, uint64_t steps, uint16_t length, int N
     // return stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] <= N;
 }
 
+// Can't use all 4 cardinal directions - guaranteed submultiplicative.
+// Probably not greater than the number of polygons.
+int notAllDirections(uint64_t steps, uint16_t length) {
+    int xStep = 1;
+    int yStep = 1;
+    int right = 0;
+    int left = 0;
+    int up = 0;
+    int down = 0;
+    for(int i = 0; i < length; ++i)
+    {
+        if(steps & 1) {
+            up |= (yStep == 1);
+            down |= (yStep == -1);
+            xStep = -xStep;
+        } else {
+            right |= (xStep == 1);
+            left |= (xStep == -1);
+            yStep = -yStep;
+        }
+        steps >>= 1;
+    }
+    return !right || !left || !up || !down;
+}
+
 std::vector<int> getStepsToOrigin()
 {
     std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToOrigin.txt)");
@@ -239,20 +288,70 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
-uint64_t islandTaxi(int N)
+bool condition(uint64_t steps, uint16_t length, int N, int endX, int endY) {
+    // return parity(steps, length);
+    return notAllDirections(steps, length);
+    // return 1;
+}
+
+bool noTwoTurns(uint64_t stepsN, uint64_t stepsM, uint16_t n, uint16_t m) {
+    if(n > 1) {
+        int a = approach(stepsN, n);
+        if(((stepsM & 1) && a == 2) || (!(stepsM & 1) && a == 1)) {
+            return false;
+        }
+    }
+    if(m > 1) {
+        uint64_t temp = stepsN + ((stepsM & 1) << n);
+        int a = approach(temp, n+1);
+        if(((stepsM & 2) && a == 2) || (!(stepsM & 2) && a == 1)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+// Checking all concatenations of valid n and m with no complicated check up to combined lenth 32 takes around 20 minutes.
+void concatenate(std::vector<std::vector<State>> valid, std::vector<std::vector<State>> invalid, int N) {
+    for(int n = 1; n <= N; ++n) {
+        for(int m = 1; m <= N - n; ++m) {
+            int count = 0;
+            // valid + valid.
+            for(int i = 0; i < valid[n].size(); ++i) {
+                for(int j = 0; j < valid[m].size(); ++j) {
+                    if(noTwoTurns(valid[n][i].steps, valid[m][j].steps, n, m)) {
+                        uint64_t steps = valid[n][i].steps + (valid[m][j].steps << n);
+                        uint16_t length = n + m;
+                        if(entireNoLoop(steps, length)) {
+                            ++count;
+                        }
+                    }
+                }
+            }
+            std::cout << n << "+" << m << "=" << n+m << ": " << count << std::endl;
+            if(count != valid[n + m].size()) {
+                std::cout << "ERROR: Concatenation of lengths " << n << " and " << m << " (" << count << ") does not equal the accepted count for length" << n+m << " (" << valid[n + m].size() << ")" << std::endl;
+            }
+        }
+    }
+}
+
+bool generate(int N)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
 
     std::vector<State> untreated;
     untreated.reserve(91355000);
 
-    // Start at H, length 1.
-    untreated.emplace_back(1, 0);
+    // Start at H, length 0.
+    untreated.emplace_back(0, 0);
 
-    uint64_t count = 0;
+    // Sum for any given index should = the number of taxi walks of that length.
+    std::vector<std::vector<State>> valid (N+1);
+    std::vector<std::vector<State>> invalid (N+1);
 
-    // int hi = N >> 1;
-    // int lo = -(N >> 1);
+    // std::cout << "1" << std::endl;
 
     while(!untreated.empty())
     {
@@ -266,19 +365,13 @@ uint64_t islandTaxi(int N)
 
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
-            // if(x > lo && x < hi && y > lo && y < hi && noLoop(steps, length, x, y)) {
-            if(noLoop(steps, length, x, y) && (N - length > 3 || canEqualSteps(steps, length, N))) {
-            // if(noLoop(steps, length, x, y)) {
-                if(length == N) {
-                    // This walk is finished.
-                    // std::cout << toBinary(steps, length) << std::endl;
-                    // count += equalSteps(steps, length);
-                    // count += parity(steps, length);
-                    // count += canDoublePolygon(x, y, steps, length, N, stepsToOrigin);
-                    ++count;
+            if(noLoop(steps, length, x, y)) {
+                if(condition(steps, length, N, x, y)) {
+                    valid[length].emplace_back(length, steps);
+                } else {
+                    invalid[length].emplace_back(length, steps);
                 }
-                else {
-                // else if(can_parity(steps, length, N)) {
+                if(length != N) {
                     untreated.emplace_back(length, steps);
                 }
             }
@@ -286,41 +379,42 @@ uint64_t islandTaxi(int N)
 
         // Vertical Step.
         if(approach(current.steps, current.length) != 2 || current.length < 2)
-        // TO EXCLUDE TURN IN FIRST 2 STEPS.
-        // if(approach(current.steps, current.length) != 2 && current.length >= 2)
         {
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps | (1ULL << current.length);
 
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
-            // if(x > lo && x < hi && y > lo && y < hi && noLoop(steps, length, x, y)) {
-            if(noLoop(steps, length, x, y) && (N - length > 3 || canEqualSteps(steps, length, N))) {
-            // if(noLoop(steps, length, x, y)) {
-                if(length == N) {
-                    // This walk is finished.
-                    // std::cout << toBinary(steps, length) << std::endl;
-                    // count += equalSteps(steps, length);
-                    // count += parity(steps, length);
-                    // count += canDoublePolygon(x, y, steps, length, N, stepsToOrigin);
-                    ++count;
+            if(noLoop(steps, length, x, y)) {
+                if(condition(steps, length, N, x, y)) {
+                    valid[length].emplace_back(length, steps);
+                } else {
+                    invalid[length].emplace_back(length, steps);
                 }
-                else {
-                // else if(can_parity(steps, length, N)) {
+                if(length != N) {
                     untreated.emplace_back(length, steps);
                 }
             }
         }
     }
-    return count << 1;
+    for(int l = 1; l < valid.size(); ++l) {
+        std::cout << "N=" << l << ": " << valid[l].size() << std::endl;
+        // for(int i = 0; i < valid[13].size(); ++i) {
+        //     std::cout << toBinary(valid[13][i].steps, valid[13][i].length) << std::endl;
+        // }
+    }
+
+    // concatenate(valid, invalid, N);
+    return true;
 }
 
 void upTo(int start, int stop) {
-    for(int n = start; n <= stop; n += 1)
+    for(int n = start; n <= stop; n += 2)
     {
         std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        std::cout << "\nn=" << n << ": " << islandTaxi(n) << std::endl;
-        // std::cout << islandTaxi(n) << std::endl;
+        // std::cout << "\nn=" << n << ": " << generate(n) << std::endl;
+        generate(n);
+        // std::cout << generate(n) << std::endl;
         std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
         double totalTime = (double)(end - begin).count() / 1000000000.0;
         std::cout << "Total Time: " << totalTime << std::endl;
@@ -333,12 +427,6 @@ int main(int argc, char *argv[])
     {
         int N = atoi(argv[1]);
         upTo(N, N);
-    }
-    else if(argc == 3)
-    {
-        int start = atoi(argv[1]);
-        int end = atoi(argv[2]);
-        upTo(start, end);
     }
     return 0;
 }

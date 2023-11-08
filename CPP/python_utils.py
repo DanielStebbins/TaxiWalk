@@ -9,7 +9,7 @@ def constant(n, taxi):
     return mu_taxi(n, taxi) ** 4 - 1
 
 i = 32
-binary_string = "10100100111111100111010"
+binary_string = "10100100100001111010110"
 taxi = binary_to_decimal(binary_string)
 # taxi = 2189670407434
 print(f"I={i}, taxi={taxi}")

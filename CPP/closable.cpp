@@ -6,6 +6,15 @@
 #include <chrono>
 #include <climits>
 
+struct State {
+    uint64_t var1;
+    uint64_t var2;
+    State *children[2]{};
+
+    State(uint16_t length, uint64_t steps):
+        var1(length), var2(steps), children{nullptr,nullptr} {}
+};
+
 std::string toBinary(uint64_t n, uint16_t len)
 {
     if(len == 0) {
@@ -14,108 +23,17 @@ std::string toBinary(uint64_t n, uint16_t len)
     std::string binary;
     for(uint16_t i = 0; i < len; i++)
     {
-        if((n >> (len - 1 - i)) & 1)
+        if((n >> i) & 1)
         {
-            binary += "1";
+            binary += "V";
         }
         else
         {
-            binary += "0";
+            binary += "H";
         }
     }
     return binary;
 }
-
-// Bits go right to left, segments go left to right.
-const uint64_t max_bit = 1ULL << 63;
-struct BigSum {
-    std::vector<uint64_t> segments;
-    
-    BigSum(uint64_t value = 0) {
-        segments.push_back(value);
-        if(segments[0] & max_bit) {
-            segments[0] &= ~max_bit;
-            segments.push_back(1);
-            std::cout << "BigSum created with carry." << std::endl;
-        }
-    }
-
-    void operator=(const BigSum &other) {
-		segments = other.segments;
-	}
- 
-	void operator=(uint64_t value) {
-		segments.clear();
-		segments.push_back(value);
-        if(segments[0] & max_bit) {
-            segments[0] &= ~max_bit;
-            segments.push_back(1);
-            std::cout << "BigSum assigned with carry." << std::endl;
-        }
-	}
-
-    BigSum operator+(const BigSum &other) const {
-        BigSum result = other;
-        for(int i = 0, carry = 0; i < std::max(segments.size(), other.segments.size()) || carry; ++i) {
-            if(i == result.segments.size()) {
-                result.segments.push_back(0);
-            }
-            // if(result.segments[i] > ULLONG_MAX - carry - (i < segments.size() ? segments[i] : 0)) {
-            //     std::cout << "OVERFLOW: " << carry << " + " << segments[i] << " + " <<  other.segments[i] << std::endl;
-            // }
-            uint64_t previous_value = result.segments[i];
-            result.segments[i] += carry + (i < segments.size() ? segments[i] : 0);
-            carry = result.segments[i] < previous_value;
-            // if(carry) {
-            //     std::cout << "CARRY: " << carry << " + " << segments[i] << " + " <<  other.segments[i] << std::endl;
-            // }
-        }
-        return result;
-	}
-
-    void operator+=(const BigSum &other) {
-		*this = *this + other;
-	}
-
-    operator bool() {
-        return segments.size() > 1 || (segments.size() == 1 && segments[0] != 0ULL);
-    }
-
-    std::string to_string() const {
-        if(segments.empty()) {
-            return "Empty!";
-        } else {
-            std::string out = "";
-            for(int i = segments.size() - 1; i >= 0; --i) {
-			    out += toBinary(segments[i], 64);
-            }
-
-            // Avoid leading 0s.
-            int i = 0;
-            while(i < out.length() && out[i] == '0') {
-                ++i;
-            }
-            return out.substr(i);
-            return out;
-        }
-    }
-
-    friend std::ostream& operator<<(std::ostream &stream, const BigSum &bigsum) {
-        stream << bigsum.to_string();
-        return stream;
-	}
-};
-
-struct State {
-    BigSum var1;
-    BigSum var2;
-    State *children[2]{};
-
-    State(uint64_t length, uint64_t steps):
-        var1(length), var2(steps), children{nullptr,nullptr} {}
-};
-
-
 
 void getPoint(uint64_t steps, uint16_t length, int &x, int &y)
 {
@@ -169,8 +87,59 @@ int approach(uint64_t steps, uint16_t length)
     return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
 }
 
+// Used to remove the heuristic for computing the steps to the origin.
+//bool canReachOrigin(uint64_t steps, uint16_t length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
+//{
+////    std::cout << "can reach" << std::endl;
+//    if(endX == 0 && endY == 0)
+//    {
+//        return true;
+//    }
+//    if(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
+//    {
+//        return false;
+//    }
+//
+//    // Horizontal Step.
+//    bool horizontalCanReach = false;
+//    bool verticalCanReach = false;
+//    if(approach(steps, length) != 1 || length < 2)
+//    {
+//        int nextX = 0;
+//        int nextY = 0;
+//        getPoint(steps, length + 1, nextX, nextY);
+//        if(nextX == 0 && nextY == 0)
+//        {
+//            return true;
+//        }
+//        if(noLoop(steps, length + 1, nextX, nextY))
+//        {
+//            horizontalCanReach = canReachOrigin(steps, length + 1, nextX, nextY, n, stepsToOrigin);
+//        }
+//    }
+//
+//    if(approach(steps, length) != 2 || length < 2)
+//    {
+//        uint64_t nextSteps = steps | (1ULL << length);
+//        int nextX = 0;
+//        int nextY = 0;
+//        getPoint(nextSteps, length + 1, nextX, nextY);
+//        if(nextX == 0 && nextY == 0)
+//        {
+//            return true;
+//        }
+//        if(noLoop(nextSteps, length + 1, nextX, nextY))
+//        {
+//            verticalCanReach = canReachOrigin(nextSteps, length + 1, nextX, nextY, n, stepsToOrigin);
+//        }
+//    }
+//
+//    return horizontalCanReach || verticalCanReach;
+//}
+
 void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::vector<int> const &stepsToOrigin)
 {
+//    while(!canReachOrigin(steps, length, endX, endY, n, stepsToOrigin))
     while(stepsToOrigin[approach(steps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length)
     {
         if(steps & 1)
@@ -216,9 +185,12 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
+#include <algorithm>
+
 std::vector<State> makeAutomaton(int n)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
+    std::cout << *std::max_element(std::begin(stepsToOrigin), std::end(stepsToOrigin)) << std::endl;
 
     std::vector<State> states;
     states.reserve(91355000);
@@ -229,10 +201,10 @@ std::vector<State> makeAutomaton(int n)
     while(untreated < states.size())
     {
         // Horizontal Step.
-        if(approach(states[untreated].var2.segments[0], states[untreated].var1.segments[0]) != 1 || states[untreated].var1.segments[0] < 2)
+        if(approach(states[untreated].var2, states[untreated].var1) != 1 || states[untreated].var1 < 2)
         {
-            uint16_t length = states[untreated].var1.segments[0] + 1;
-            uint64_t steps = states[untreated].var2.segments[0];
+            uint16_t length = states[untreated].var1 + 1;
+            uint64_t steps = states[untreated].var2;
 
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
@@ -261,10 +233,10 @@ std::vector<State> makeAutomaton(int n)
         }
 
         // Vertical Step.
-        if(approach(states[untreated].var2.segments[0], states[untreated].var1.segments[0]) != 2 || states[untreated].var1.segments[0] < 2)
+        if(approach(states[untreated].var2, states[untreated].var1) != 2 || states[untreated].var1 < 2)
         {
-            uint16_t length = states[untreated].var1.segments[0] + 1;
-            uint64_t steps = states[untreated].var2.segments[0] | (1ULL << states[untreated].var1.segments[0]);
+            uint16_t length = states[untreated].var1 + 1;
+            uint64_t steps = states[untreated].var2 | (1ULL << states[untreated].var1);
 
             int x = 0, y = 0;
             getPoint(steps, length, x, y);
@@ -293,7 +265,7 @@ std::vector<State> makeAutomaton(int n)
         ++untreated;
     }
 
-    // Reset each state's number variables so they're no longer pattern and length, instead automaton iteration counts.
+    // Reset first 16 bytes to use when running the automaton.
     for(auto & state : states)
     {
         state.var1 = 0;
@@ -302,17 +274,16 @@ std::vector<State> makeAutomaton(int n)
     return states;
 }
 
-BigSum taxi(int automaton_size, int num_iterations)
+uint64_t taxi(int N)
 {
-    std::vector<State> automaton = makeAutomaton(automaton_size);
-
-    std::cout << "Automaton Generated." << std::endl;
+    std::vector<State> automaton = makeAutomaton(N);
 
     // Sets "H" to current count 1.
     automaton[1].var1 = 1;
 
     // Ends one step early, because on the final loop there's no need to move var2 to var1.
-    for(int n = 2; n < num_iterations; ++n)
+    // uint64_t limit = 1ULL << 63;
+    for(int n = 2; n < N; ++n)
     {
         for(auto & state : automaton)
         {
@@ -333,76 +304,84 @@ BigSum taxi(int automaton_size, int num_iterations)
             state.var1 = state.var2;
             state.var2 = 0;
         }
-
-        // if((n + 1) % 50 == 0) {
-            // std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << "." << std::endl;
-            // BigSum taxiWalks = 0;
-            // for(auto & state : automaton)
-            // {
-            //     if(state.var1)
-            //     {
-            //         if(state.children[0])
-            //         {
-            //             taxiWalks += state.var1;
-            //         }
-            //         if(state.children[1])
-            //         {
-            //             taxiWalks += state.var1;
-            //         }
-            //     }
-            // }
-            // std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
+        
+        // uint64_t taxiWalks = 0;
+        // for(auto & state : automaton)
+        // {
+        //     if(state.var1)
+        //     {
+        //         if(state.children[0])
+        //         {
+        //             if(taxiWalks > ULLONG_MAX - state.var1) {
+        //                 return n + 1;
+        //             }
+        //             taxiWalks += state.var1;
+        //             // if(taxiWalks >= limit) {
+        //             //     return n + 1;
+        //             // }
+        //         }
+        //         if(state.children[1])
+        //         {
+        //             if(taxiWalks > ULLONG_MAX - state.var1) {
+        //                 return n + 1;
+        //             }
+        //             taxiWalks += state.var1;
+        //             // if(taxiWalks >= limit) {
+        //             //     return n + 1;
+        //             // }
+        //         }
+        //     }
         // }
+        // if(taxiWalks > ULLONG_MAX / 2) {
+        //     return n + 1;
+        // } 
+        // std::cout << "n=" << n + 1 << ": " << taxiWalks * 2 << std::endl;
     }
     // return 0;
-
-    std::cout << "Computing final sum..." << std::endl;
-
-    BigSum taxiWalks = 0;
+//    std::cout <<"Number of states for length " << N << ": " << automaton.size() << std::endl;
+    uint64_t taxiWalks = 0;
     for(auto & state : automaton)
     {
         if(state.var1)
         {
-            // if(state.children[0])
-            if(state.children[0] && (state.children[0]->children[0] || state.children[0]->children[1])) {
+            // Commented conditions remove dead end states.
+            // if(state.children[0] && (state.children[0]->children[0] || state.children[0]->children[1])) {
+            if(state.children[0]) {
                 taxiWalks += state.var1;
             }
-            // if(state.children[1])
-            if(state.children[1] && (state.children[1]->children[0] || state.children[1]->children[1])) {
+            // if(state.children[1] && (state.children[1]->children[0] || state.children[1]->children[1])) {
+            if(state.children[1]) {
                 taxiWalks += state.var1;
             }
         }
     }
-    return taxiWalks;
+    return taxiWalks << 1;
 }
 
-void run(int automaton_size, int num_iterations)
+void upTo(int start, int stop)
 {
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
-    BigSum t = taxi(automaton_size, num_iterations);
-
-    // << '0' << is to "multiply by 2". Only works for binary outputs.
-    std::cout << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
-
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    double totalTime = (double)(end - begin).count() / 1000000000.0;
-    std::cout << "Total Time: " << totalTime << std::endl;
+    for(int n = start; n <= stop; n += 1)
+    {
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+        std::cout << "\nn=" << n << ": " << taxi(n) << std::endl;
+        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+        double totalTime = (double)(end - begin).count() / 1000000000.0;
+        std::cout << "Total Time: " << totalTime << std::endl;
+    }
 }
 
 int main(int argc, char *argv[])
 {
-    // Automaton size must not be more than 63 because the automaton generator still uses only 64 bits of each state's variables.
     if(argc == 2)
     {
         int N = atoi(argv[1]);
-        run(N, N);
+        upTo(N, N);
     }
     else if(argc == 3)
     {
-        int automaton_size = atoi(argv[1]);
-        int num_iterations = atoi(argv[2]);
-        run(automaton_size, num_iterations);
+        int start = atoi(argv[1]);
+        int end = atoi(argv[2]);
+        upTo(start, end);
     }
     return 0;
 }
