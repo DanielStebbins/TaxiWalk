@@ -75,8 +75,9 @@ bool noLoop(uint64_t steps, uint16_t length, int endX, int endY) {
     return noLoop;
 }
 
+
 int approach(uint64_t steps, uint16_t length) {
-    return (int) ((steps >> (length - 2) & 1) * 2 + (steps >> (length - 1)));
+    return steps >> (length - 2) & 3;
 }
 
 
@@ -108,7 +109,7 @@ void reduce(uint64_t &steps, uint16_t &length, int endX, int endY, int n, std::v
 
 std::vector<int> getStepsToOrigin()
 {
-    std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToOrigin.txt)");
+    std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToOriginFlipped.txt)");
     std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
     std::stringstream stream(content);
     std::vector<int> stepsToOrigin;
@@ -136,7 +137,7 @@ std::vector<State> makeAutomaton(int n)
 
     while(untreated < states.size()) {
         // Horizontal Step.
-        if(approach(states[untreated].var2, states[untreated].var1) != 1 || states[untreated].var1 < 2) {
+        if(approach(states[untreated].var2, states[untreated].var1) != 2 || states[untreated].var1 < 2) {
             uint16_t length = states[untreated].var1 + 1;
             uint64_t steps = states[untreated].var2;
 
@@ -160,7 +161,7 @@ std::vector<State> makeAutomaton(int n)
         }
 
         // Vertical Step.
-        if(approach(states[untreated].var2, states[untreated].var1) != 2 || states[untreated].var1 < 2)
+        if(approach(states[untreated].var2, states[untreated].var1) != 1 || states[untreated].var1 < 2)
         {
             uint16_t length = states[untreated].var1 + 1;
             uint64_t steps = states[untreated].var2 | (1ULL << states[untreated].var1);

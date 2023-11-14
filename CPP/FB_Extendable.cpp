@@ -6,6 +6,7 @@
 #include <chrono>
 #include <climits>
 #include <unordered_set>
+#include <deque>
 
 const int MAX_N_POWER = 6;
 const int MAX_N = 64;
@@ -80,11 +81,9 @@ point_set getPoints(uint64_t steps, uint16_t length, int &x, int &y, bool revers
     return points;
 }
 
-bool noLoop(uint64_t steps, uint16_t length, int endX, int endY) {
-    int x = 0;
-    int xStep = 1;
-    int y = 0;
-    int yStep = 1;
+bool noLoop(uint64_t steps, uint16_t length, int x, int y, int endX, int endY, bool reverse) {
+    int xStep = 1 - ((y & 1 ^ reverse) << 1);
+    int yStep = 1 - ((x & 1 ^ reverse) << 1);
     bool noLoop = x != endX || y != endY;
     int i = 0;
     while(noLoop && i < length - 12) {
@@ -124,8 +123,13 @@ bool noIntersection(uint64_t steps, uint16_t length, int x, int y) {
     return noIntersection;
 }
 
+
+// HH -> 00 (0)
+// HV -> 10 (2)
+// VH -> 01 (1)
+// VV -> 11 (3)
 inline int approach(uint64_t steps, uint16_t length) {
-    return (steps >> (length - 2) & 3);
+    return steps >> (length - 2) & 3;
 }
 
 
@@ -192,19 +196,125 @@ void getBoundingBox(uint64_t steps, uint16_t length, int &minX, int &maxX, int &
 
 
 // "On the minX boundary, horizontal step goes left (-x), and taking that horizontal step doesn't break the 2-turn rule (should never be less than length 2)".
-inline bool canEscape(uint64_t steps, uint16_t length, int x, int y, int minX, int maxX, int minY, int maxY) {   
-    return (x == minX && (y & 1) || x == maxX && !(y & 1)) && (approach(steps, length) != 2)
-            || (y == minY && (x & 1) || y == maxY && !(x & 1)) && (approach(steps, length) != 1);
+inline bool canEscape(uint64_t steps, uint16_t length, int x, int y, int minX, int maxX, int minY, int maxY, bool reverse) {   
+    return (x == minX && (y & 1 ^ reverse) || x == maxX && !(y & 1 ^ reverse)) && (approach(steps, length) != 2)
+            || (y == minY && (x & 1 ^ reverse) || y == maxY && !(x & 1 ^ reverse)) && (approach(steps, length) != 1);
 }
+
+
+// Crashes on n = 23+, needs debug prints.
 
 // Can some valid walk go from the given point (one of the endpoints of the walk we're testing)
 // to the bounding box of the walk (minX to maxX, minY to maxY)? Or do all walks originating at
 // the given point die out?
 bool extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY, bool reverse) {
-    // int minX = 0, maxX = 0, minY = 0, maxY = 0;
-    // getBoundingBox(jail_steps, jail_length, minX, maxX, minY, maxY);
-    return true;
-    // Make sure the start of the escape steps have the end of the jail steps for 2-turn.
+    if(jail_length < 10) {
+        return true;
+    }
+
+    std::cout << "Jail: " << toBinary(jail_steps, jail_length) << std::endl;
+
+    int minX = 0, maxX = 0, minY = 0, maxY = 0;
+    getBoundingBox(jail_steps, jail_length, minX, maxX, minY, maxY);
+
+
+    int lastTwo = jail_steps >> (jail_length - 2);
+    if(reverse) {
+        lastTwo = ((jail_steps & 1) << 1) | ((jail_steps >> 1) & 1);
+    }
+
+    // Can escape with a single step from the end of the jail, hopefully a good number fall into this case.
+    if(canEscape(lastTwo, 2, startX, startY, minX, maxX, minY, maxY, reverse)) {
+        return true;
+    }
+
+    // No child pointers here. TODO: MAKE A SEPARATE STATE CLASS WITHOUT CHILD POINTERS TO SAVE SPACE AND TIME.
+    std::deque<State> escapes;
+    escapes.emplace_back(0, 0, nullptr);
+
+    // // Walk H (Length 1 pain for approach function).
+    // if(lastTwo != 2) {
+    //     uint16_t length = 1;
+    //     uint64_t steps = 0;
+    //     int x = startX + 1 - ((startY & 1 ^ reverse) << 1);
+    //     int y = startY;
+    //     if(noIntersection(jail_steps, jail_length, x, y)) {
+    //         // Special steps counting jail steps for 2 turn policy.
+    //         if(canEscape(lastTwo >> 1, 2, x, y, minX, maxX, minY, maxY, reverse)) {
+    //             return true;
+    //         } else {
+    //             escapes.emplace_back(length, steps, nullptr);
+    //         }
+    //     }
+    // }
+
+    // // Walk V (Length 1 pain for approach function).
+    // if(lastTwo != 1) {
+    //     uint16_t length = 1;
+    //     uint64_t steps = 1;
+    //     int x = startX;
+    //     int y = startY + 1 - ((startX & 1 ^ reverse) << 1);
+    //     if(noIntersection(jail_steps, jail_length, x, y)) {
+    //         // Special steps counting jail steps for 2 turn policy.
+    //         if(canEscape(2 + (lastTwo >> 1), 2, x, y, minX, maxX, minY, maxY, reverse)) {
+    //             return true;
+    //         } else {
+    //             escapes.emplace_back(length, steps, nullptr);
+    //         }
+    //     }
+    // }
+
+    while(!escapes.empty()) {
+        State *current = &escapes.front();
+        escapes.pop_front();
+
+        std::cout << toBinary(current->var2, current->var1) << std::endl;
+
+        uint64_t approach_steps = current->var2;
+        uint64_t approach_length = current->var1;
+        if(current->var1 == 0) {
+            approach_steps = lastTwo;
+            approach_length = 2;
+        } else if (current->var2 == 1) {
+            approach_steps = (approach_steps << 1) | (lastTwo >> 1);
+            approach_length = 2;
+        }
+        int a = approach(approach_steps, approach_length);
+
+        // Horizontal Step.
+        if(a != 2) {
+            uint16_t length = current->var1 + 1;
+            uint64_t steps = current->var2;
+            int x = startX;
+            int y = startY;
+            getEndPoint(steps, length, x, y, reverse);
+            if(noLoop(steps, length, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y)) {
+                if(canEscape(steps, length, x, y, minX, maxX, minY, maxY, reverse)) {
+                    return true;
+                } else {
+                    escapes.emplace_back(length, steps, nullptr);
+                }
+            }
+        }
+
+        // Vertical Step.
+        if(a != 1) {
+            uint16_t length = current->var1 + 1;
+            uint64_t steps = current->var2 | (1ULL << current->var1);
+            int x = startX;
+            int y = startY;
+            getEndPoint(steps, length, x, y, reverse);
+            if(noLoop(steps, length, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y)) {
+                if(canEscape(steps, length, x, y, minX, maxX, minY, maxY, reverse)) {
+                    return true;
+                } else {
+                    escapes.emplace_back(length, steps, nullptr);
+                }
+            }
+        }
+    }
+    // All walks died, could not escape.
+    return false;
 }
 
 
@@ -230,7 +340,7 @@ std::vector<State> makeAutomaton(int n)
 
             int x = 0, y = 0;
             getEndPoint(steps, length, x, y, false);
-            if(noLoop(steps, length, x, y) && extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
+            if(noLoop(steps, length, 0, 0, x, y, false) && extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
                 reduce(steps, length, x, y, n, stepsToOrigin);
                 State *parent = &states[1];
                 uint64_t tempSteps = steps;
@@ -255,7 +365,7 @@ std::vector<State> makeAutomaton(int n)
 
             int x = 0, y = 0;
             getEndPoint(steps, length, x, y, false);
-            if(noLoop(steps, length, x, y) && extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
+            if(noLoop(steps, length, 0, 0, x, y, false) && extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
                 reduce(steps, length, x, y, n, stepsToOrigin);
                 State *parent = &states[1];
                 uint64_t tempSteps = steps;
