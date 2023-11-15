@@ -208,23 +208,27 @@ inline bool canEscape(uint64_t steps, uint16_t length, int x, int y, int minX, i
 // to the bounding box of the walk (minX to maxX, minY to maxY)? Or do all walks originating at
 // the given point die out?
 bool extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY, bool reverse) {
+    // if(jail_steps == 0b100011111111111000000000001111111110000000) {
+    //     std::cout << toBinary(jail_steps, jail_length) << std::endl;
+    // }
+
     if(jail_length < 10) {
+        // std::cout << "Too short to jail." << std::endl;
         return true;
     }
-
-    std::cout << "Jail: " << toBinary(jail_steps, jail_length) << std::endl;
 
     int minX = 0, maxX = 0, minY = 0, maxY = 0;
     getBoundingBox(jail_steps, jail_length, minX, maxX, minY, maxY);
 
 
-    int lastTwo = jail_steps >> (jail_length - 2);
+    int lastTwo = approach(jail_steps, jail_length);
     if(reverse) {
         lastTwo = ((jail_steps & 1) << 1) | ((jail_steps >> 1) & 1);
     }
 
     // Can escape with a single step from the end of the jail, hopefully a good number fall into this case.
     if(canEscape(lastTwo, 2, startX, startY, minX, maxX, minY, maxY, reverse)) {
+        // std::cout << "Already escapes" << std::endl;
         return true;
     }
 
@@ -232,50 +236,25 @@ bool extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int start
     std::deque<State> escapes;
     escapes.emplace_back(0, 0, nullptr);
 
-    // // Walk H (Length 1 pain for approach function).
-    // if(lastTwo != 2) {
-    //     uint16_t length = 1;
-    //     uint64_t steps = 0;
-    //     int x = startX + 1 - ((startY & 1 ^ reverse) << 1);
-    //     int y = startY;
-    //     if(noIntersection(jail_steps, jail_length, x, y)) {
-    //         // Special steps counting jail steps for 2 turn policy.
-    //         if(canEscape(lastTwo >> 1, 2, x, y, minX, maxX, minY, maxY, reverse)) {
-    //             return true;
-    //         } else {
-    //             escapes.emplace_back(length, steps, nullptr);
-    //         }
-    //     }
-    // }
-
-    // // Walk V (Length 1 pain for approach function).
-    // if(lastTwo != 1) {
-    //     uint16_t length = 1;
-    //     uint64_t steps = 1;
-    //     int x = startX;
-    //     int y = startY + 1 - ((startX & 1 ^ reverse) << 1);
-    //     if(noIntersection(jail_steps, jail_length, x, y)) {
-    //         // Special steps counting jail steps for 2 turn policy.
-    //         if(canEscape(2 + (lastTwo >> 1), 2, x, y, minX, maxX, minY, maxY, reverse)) {
-    //             return true;
-    //         } else {
-    //             escapes.emplace_back(length, steps, nullptr);
-    //         }
-    //     }
-    // }
-
     while(!escapes.empty()) {
         State *current = &escapes.front();
-        escapes.pop_front();
 
-        std::cout << toBinary(current->var2, current->var1) << std::endl;
+        if(jail_steps == 0b100011111111111000000000001111111110000000 && current->var1 <= 60) {
+            std::cout << toBinary(current->var2, current->var1) << std::endl;
+        }
+
+        // std::cout << toBinary(current->var2, current->var1) << std::endl;
 
         uint64_t approach_steps = current->var2;
         uint64_t approach_length = current->var1;
+
+        // escapes.pop_front();
+
+
         if(current->var1 == 0) {
             approach_steps = lastTwo;
             approach_length = 2;
-        } else if (current->var2 == 1) {
+        } else if (current->var1 == 1) {
             approach_steps = (approach_steps << 1) | (lastTwo >> 1);
             approach_length = 2;
         }
@@ -290,6 +269,7 @@ bool extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int start
             getEndPoint(steps, length, x, y, reverse);
             if(noLoop(steps, length, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y)) {
                 if(canEscape(steps, length, x, y, minX, maxX, minY, maxY, reverse)) {
+                    // std::cout << toBinary(steps, length) << std::endl;
                     return true;
                 } else {
                     escapes.emplace_back(length, steps, nullptr);
@@ -306,14 +286,17 @@ bool extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int start
             getEndPoint(steps, length, x, y, reverse);
             if(noLoop(steps, length, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y)) {
                 if(canEscape(steps, length, x, y, minX, maxX, minY, maxY, reverse)) {
+                    // std::cout << toBinary(steps, length) << std::endl;
                     return true;
                 } else {
                     escapes.emplace_back(length, steps, nullptr);
                 }
             }
         }
+        escapes.pop_front();
     }
     // All walks died, could not escape.
+    // std::cout << "=== FALSE ===" << std::endl;
     return false;
 }
 
@@ -340,19 +323,25 @@ std::vector<State> makeAutomaton(int n)
 
             int x = 0, y = 0;
             getEndPoint(steps, length, x, y, false);
-            if(noLoop(steps, length, 0, 0, x, y, false) && extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
-                reduce(steps, length, x, y, n, stepsToOrigin);
-                State *parent = &states[1];
-                uint64_t tempSteps = steps;
-                for(int i = 0; i < length - 1; ++i) {
-                    parent = parent->children[tempSteps & 1];
-                    tempSteps >>= 1;
-                }
-                if(parent->children[tempSteps] == &states[0]) {
-                    states.emplace_back(length, steps, &states[0]);
-                    states[untreated].children[0] = &states.back();
-                } else {
-                    states[untreated].children[0] = parent->children[tempSteps];
+            // Combine into 1 if statement after debugging.
+            if(noLoop(steps, length, 0, 0, x, y, false)) {
+                // if(length == 25) {
+                //     std::cout << "\nJail: " << toBinary(steps, length) << std::endl;
+                // }
+                if(extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
+                    reduce(steps, length, x, y, n, stepsToOrigin);
+                    State *parent = &states[1];
+                    uint64_t tempSteps = steps;
+                    for(int i = 0; i < length - 1; ++i) {
+                        parent = parent->children[tempSteps & 1];
+                        tempSteps >>= 1;
+                    }
+                    if(parent->children[tempSteps] == &states[0]) {
+                        states.emplace_back(length, steps, &states[0]);
+                        states[untreated].children[0] = &states.back();
+                    } else {
+                        states[untreated].children[0] = parent->children[tempSteps];
+                    }
                 }
             }
         }
@@ -365,19 +354,24 @@ std::vector<State> makeAutomaton(int n)
 
             int x = 0, y = 0;
             getEndPoint(steps, length, x, y, false);
-            if(noLoop(steps, length, 0, 0, x, y, false) && extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
-                reduce(steps, length, x, y, n, stepsToOrigin);
-                State *parent = &states[1];
-                uint64_t tempSteps = steps;
-                for(int i = 0; i < length - 1; ++i) {
-                    parent = parent->children[tempSteps & 1];
-                    tempSteps >>= 1;
-                }
-                if(parent->children[tempSteps] == &states[0]) {
-                    states.emplace_back(length, steps, &states[0]);
-                    states[untreated].children[1] = &states.back();
-                } else {
-                    states[untreated].children[1] = parent->children[tempSteps];
+            if(noLoop(steps, length, 0, 0, x, y, false)) {
+                // if(length == 25) {
+                //     std::cout << "\nJail: " << toBinary(steps, length) << std::endl;
+                // }
+                if(extendable(steps, length, x, y, false) && extendable(steps, length, 0, 0, true)) {
+                    reduce(steps, length, x, y, n, stepsToOrigin);
+                    State *parent = &states[1];
+                    uint64_t tempSteps = steps;
+                    for(int i = 0; i < length - 1; ++i) {
+                        parent = parent->children[tempSteps & 1];
+                        tempSteps >>= 1;
+                    }
+                    if(parent->children[tempSteps] == &states[0]) {
+                        states.emplace_back(length, steps, &states[0]);
+                        states[untreated].children[1] = &states.back();
+                    } else {
+                        states[untreated].children[1] = parent->children[tempSteps];
+                    }
                 }
             }
         }
