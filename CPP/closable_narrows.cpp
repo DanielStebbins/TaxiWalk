@@ -519,13 +519,8 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
             getLongEndPoint(&h, x, y, reverse);
             LongWalk combined = combineJailEscape(jail_steps, jail_length, &h, reverse);
             int parity = 0;
-            if(x == goalX && y == goalY && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistentNarrow(&combined, parity)) {
-                if(narrowExcluded(&combined, parity)){
-                    return 2;
-                } else {
-                    test = true;
-                }
-
+            if(x == goalX && y == goalY && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
+                return 2;
             }
             else if(longNoLoop(&h, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
                 if(canEscape(ha, x, y, minX, maxX, minY, maxY, reverse)) {
@@ -545,12 +540,8 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
             getLongEndPoint(&v, x, y, reverse);
             int parity = 0;
             LongWalk combined = combineJailEscape(jail_steps, jail_length, &v, reverse);
-                if(x == goalX && y == goalY && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistentNarrow(&combined, parity)) {
-                    if(narrowExcluded(&combined, parity)){
-                        return 2;
-                    } else {
-                        test = true;
-                    }
+                if(x == goalX && y == goalY && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
+                    return 2;
                 }
                 else if(longNoLoop(&v, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
                     if(canEscape(va, x, y, minX, maxX, minY, maxY, reverse)) {
@@ -563,9 +554,9 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
         escapes.pop_front();
     }
     // All walks died, could not escape.
-    if(test){
-        std::cout << "FAILED: " << toBinary(jail_steps, jail_length) << std::endl;
-    }
+    // if(test){
+    //     std::cout << "FAILED: " << toBinary(jail_steps, jail_length) << std::endl;
+    // }
     return 0;
 }
 
