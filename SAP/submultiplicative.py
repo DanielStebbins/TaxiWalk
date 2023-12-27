@@ -98,6 +98,11 @@ plus_two_ratios = [1.33333, 1.6, 1.5, 1.53846, 1.52381, 1.52941, 1.52727, 1.5280
 # Submultiplicative but approaching too low of a mu.
 not_all_directions = [2, 4, 6, 10, 16, 26, 42, 66, 106, 164, 262, 402, 638, 974, 1536, 2338, 3666, 5570, 8690, 13188, 20486, 31066, 48078, 72870, 112416, 170322, 262042, 396914, 609242, 922628, 1413382, 2140066, 3272830, 4954910, 7566592, 11454274, 17469858, 26443522, 40287842, 60977924, 92816390, 140474282, 213649166, 323333558, 491421984, 743677810, 1129609706, 1709393394, 2595135882]
 
+
+# Closable no Narrows
+cnn = [0, 2, 4, 6, 10, 16, 26, 42, 68, 110, 178, 288, 456, 728, 1168, 1870, 2964, 4726, 7544, 12038, 19052, 30278, 48176, 76650, 121192, 192336, 305354, 484850, 766254, 1214582, 1925274, 3052472, 4821432, 7634668, 12087902, 19142778, 30222274]
+
+
 # mu = []
 # for x in plus_two_ratios:
 #     print((4/x)**2-1)
@@ -112,9 +117,16 @@ not_all_directions = [2, 4, 6, 10, 16, 26, 42, 66, 106, 164, 262, 402, 638, 974,
 #         print("OOP")
 #     p = c
 
+# last = -float("inf")
+# for i in range(len(cnn)):
+#     current = (c[i] ** (4/(i+1)) - 1) - (cnn[i] ** (4/(i+1)) - 1)
+#     print(current)
+#     if current < last:
+#         print("DECREASE")
+#     last = current
 
-s = not_all_directions
-# test_submultiplicative(s)
+s = cnn
+test_submultiplicative(s)
 # test_supermultiplicative(s)
 # lowest_ratios(s)
 # highest_ratios(s, 12, 4)

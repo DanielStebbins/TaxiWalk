@@ -196,7 +196,7 @@ std::vector<State> makeAutomaton(int n)
 }
 
 uint64_t taxi(int N) {
-    std::vector<State> automaton = makeAutomaton(N);
+    std::vector<State> automaton = makeAutomaton(15);
 
     // Sets "H" to current count 1.
     automaton[2].var1 = 1;
