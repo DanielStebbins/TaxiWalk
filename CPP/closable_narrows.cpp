@@ -106,30 +106,6 @@ struct LongWalk {
         return out;
     }
 
-    LongWalk flip() {
-        LongWalk temp;
-        int m = length & 63;
-        uint64_t last = steps.back();
-        for(int j = m - 1; j >= 0; j--) {
-            if((last >> j) & 1) {
-                temp = temp.verticalStep();
-            } else {
-                temp = temp.horizontalStep();
-            }
-        }
-        for(int i = steps.size() - 2; i >= 0; i++) {
-            uint64_t tempSteps = steps[i];
-            for(int j = 63; j >= 0; j--) {
-                if((tempSteps >> j) & 1) {
-                    temp = temp.verticalStep();
-                } else {
-                    temp = temp.horizontalStep();
-                }
-            }
-        }
-        return temp;
-    }
-
     std::string to_string() const {
         if(steps.empty()) {
             return "Empty!";
@@ -247,14 +223,8 @@ inline int approach(uint64_t steps, uint16_t length) {
     return steps >> (length - 2) & 3;
 }
 
-inline int longApproach(LongWalk *walk, uint16_t lastTwo) {
-    if(walk->length == 0) {
-        return lastTwo;
-    } else if (walk->length == 1) {
-        return (walk->steps[0] << 1) | (lastTwo >> 1);
-    } else {
-        return approach(walk->steps.back(), walk->length & 63);
-    }
+inline int longApproach(LongWalk *walk) {
+    return approach(walk->steps.back(), walk->length & 63);
 }
 
 void getBoundingBox(uint64_t steps, uint16_t length, int &minX, int &maxX, int &minY, int &maxY) {
@@ -286,14 +256,7 @@ inline bool canEscape(int approach, int x, int y, int minX, int maxX, int minY, 
             || (y == minY && (x & 1) || y == maxY && !(x & 1)) && (approach != 1);
 }
 
-LongWalk combineJailEscape(uint64_t jail_steps, uint16_t jail_length, LongWalk *escape) {
-    LongWalk temp;
-    temp.steps.push_back(jail_steps);
-    temp.length = jail_length;
-    return temp.append(*escape);
-}
-
-
+// Returns the parity of this section.
 int shortNarrowHelper(uint64_t steps, uint16_t length, int &x1, int &y1, int &x2, int &y2, int x3, int y3, int x4, int y4) {
     int xStep = 1;
     int yStep = 1;
@@ -310,11 +273,8 @@ int shortNarrowHelper(uint64_t steps, uint16_t length, int &x1, int &y1, int &x2
         steps >>= 1;
 
         if(abs(x4 - x1) + abs(y4 - y1) == 1 && abs(x3 - x2) + abs(y3 - y2) == 1) {
-            if((x1 + y1) & 1) {
-                return 1;
-            } else {
-                return 2;
-            }
+            // The parity of the number of steps taken gives the parity of the point (x1, y1).
+            return 2 - (i & 1);
         }
     }
     return 0;
@@ -330,10 +290,7 @@ int shortNarrowParity(LongWalk *toCheck, int x3, int y3, int x4, int y4) {
     int index = 0;
     int xStep = 1;
     int yStep = 1;
-    int x1 = 0;
-    int y1 = 0;
-    int x2 = 0;
-    int y2 = 0;
+    int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
     while(length + 64 < toCheck->length - 10) {
         int parity = shortNarrowHelper(toCheck->steps[index], 64, x1, y1, x2, y2, x3, y3, x4, y4);
         if(parity) {
@@ -347,68 +304,14 @@ int shortNarrowParity(LongWalk *toCheck, int x3, int y3, int x4, int y4) {
     return shortNarrowHelper(toCheck->steps[index], m, x1, y1, x2, y2, x3, y3, x4, y4);
 }
 
-bool consistentNarrow(LongWalk *walk, int &parity) {
-    if(walk->length < 10) {
-        return true;
-    }
-
-    // (1)-->(2)
-    // (4)<--(3)
-    int xStep = 1;
-    int yStep = 1;
-    int x3 = 0;
-    int y3 = 0;
-    int x4 = 0;
-    int y4 = 0;
-
-    LongWalk toCheck;
-    for(int i = 0; i < walk->steps.size() - 1; i++) {
-        uint64_t tempSteps = walk->steps[i];
-        for(int j = 0; j < 64; j++) {
-            x3 = x4;
-            y3 = y4;
-            if(tempSteps & 1) {
-                y4 += yStep;
-                xStep = -xStep;
-                toCheck = toCheck.verticalStep();
-            } else {
-                x4 += xStep;
-                yStep = -yStep;
-                toCheck = toCheck.horizontalStep();
-            }
-            tempSteps >>= 1;
-
-            int newParity = shortNarrowParity(&toCheck, x3, y3, x4, y4);
-            if(parity && newParity && parity != newParity) {
-                return false;
-            } else if(newParity) {
-                parity = newParity;
-            }
-        }
-    }
-    int m = walk->length & 63;
-    uint64_t tempSteps = walk->steps.back();
-    for(int j = 0; j < m; j++) {
-        x3 = x4;
-        y3 = y4;
-        if(tempSteps & 1) {
-            y4 += yStep;
-            xStep = -xStep;
-            toCheck = toCheck.verticalStep();
+// For when a single step is added to the end of a walk whose parity is known.
+bool oneStepConsistentNarrow(LongWalk *walk, int x3, int y3, int x4, int y4) {
+    int newParity = shortNarrowParity(walk, x3, y3, x4, y4);
+    if(newParity) {
+        if(walk->parity && walk->parity != newParity) {
+            return false;
         } else {
-            x4 += xStep;
-            yStep = -yStep;
-            toCheck = toCheck.horizontalStep();
-        }
-        tempSteps >>= 1;
-
-        int newParity = shortNarrowParity(&toCheck, x3, y3, x4, y4);
-        if(newParity) {
-            if(parity && parity != newParity) {
-                return false;
-            } else {
-                parity = newParity;
-            }
+            walk->parity = newParity;
         }
     }
     return true;
@@ -417,8 +320,8 @@ bool consistentNarrow(LongWalk *walk, int &parity) {
 
 // Narrow structures must be created by unoccupied odd vertices. Therefore, they must be outside the final contour.
 // Odd v1 -> must be closed clockwise (more right turns). Even v1 -> must be closed counterclockwise (more left turns).
-bool narrowExcluded(LongWalk *walk, int parity) {
-    if(!parity) {
+bool narrowExcluded(LongWalk *walk) {
+    if(!walk->parity) {
         // Zero parity, no narrow.
         return true;
     }
@@ -461,7 +364,7 @@ bool narrowExcluded(LongWalk *walk, int parity) {
     leftTurns += (!prevStep && step && !diff) || ((prevStep == 1) && !step && diff);
 
     // Parity 1 -> v1 odd and must be clockwise, parity 2 -> v1 even must be counterclockwise.
-    return (parity & 1) == (rightTurns > leftTurns);
+    return (walk->parity & 1) == (rightTurns > leftTurns);
 }
 
 
@@ -480,53 +383,58 @@ uint64_t reverse(uint64_t steps, uint16_t length) {
 // to the bounding box of the walk (minX to maxX, minY to maxY)? Or do all walks originating at
 // the given point die out?
 // Returns 0 if not extendable (boxed), 1 if extendable (escapes bounding box), 2 if encountered the goal point.
-int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY) {
-    if(jail_length < 10) {
+int extendable(LongWalk *jail, int startX, int startY) {
+    if(jail->length < 10) {
         return 2;
     }
 
+    LongWalk jailBackup = *jail;
     // Fips the walk. Start at origin only if called from reverse call or polygon, reversing a polygon does nothing.
     if(startX == 0 && startY == 0) {
-        jail_steps = reverse(jail_steps, jail_length);
-        getEndPoint(jail_steps, jail_length, startX, startY);
+        // Jail is never longer than 64 steps.
+        jail->steps[0] = reverse(jail->steps[0], jail->length);
+        if(jail->parity && (jail->length & 1) == 0) {
+            jail->parity ^= 3;
+        }
+        getEndPoint(jail->steps[0], jail->length, startX, startY);
     }
 
     int minX = 0, maxX = 0, minY = 0, maxY = 0;
-    getBoundingBox(jail_steps, jail_length, minX, maxX, minY, maxY);
+    getBoundingBox(jail->steps[0], jail->length, minX, maxX, minY, maxY);
 
-    int firstTwoFlipped = ((jail_steps & 1) << 1) | ((jail_steps >> 1) & 1);
-    int lastTwo = approach(jail_steps, jail_length);
+    int firstTwoFlipped = ((jail->steps[0] & 1) << 1) | ((jail->steps[0] >> 1) & 1);
+    int lastTwo = approach(jail->steps[0], jail->length);
 
     // Can escape with a single step from the end of the jail, hopefully a good number fall into this case.
     if(canEscape(lastTwo, startX, startY, minX, maxX, minY, maxY)) {
+        *jail = jailBackup;
         return 1;
     }
 
-    bool test = false;
-
     std::deque<LongWalk> escapes;
-    escapes.emplace_back();
+    escapes.push_back(*jail);
     while(!escapes.empty()) {
         LongWalk *current = &escapes.front();
-        int a = longApproach(current, lastTwo);
-        int prevX = startX;
-        int prevY = startY;
+        int a = longApproach(current);
+        int prevX = 0;
+        int prevY = 0;
         getLongEndPoint(current, prevX, prevY);
 
         // Horizontal Step.
         if(a != 2) {
             LongWalk h = current->horizontalStep();
-            int ha = longApproach(&h, lastTwo);
-            int x = startX;
-            int y = startY;
+            int ha = longApproach(&h);
+            int x = 0;
+            int y = 0;
             getLongEndPoint(&h, x, y);
-            LongWalk combined = combineJailEscape(jail_steps, jail_length, &h);
-            int parity = 0;
-            if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
+            bool consistent = oneStepConsistentNarrow(&h, prevX, prevY, x, y);
+            if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistent && narrowExcluded(&h)) {
+                *jail = jailBackup;
                 return 2;
             }
-            else if(longNoLoop(&h, startX, startY, x, y) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
+            else if(longNoLoop(&h, 0, 0, x, y) && consistent) {
                 if(canEscape(ha, x, y, minX, maxX, minY, maxY)) {
+                    *jail = jailBackup;
                     return 1;
                 } else {
                     escapes.push_back(h);
@@ -537,29 +445,28 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
         // Vertical Step.
         if(a != 1) {
             LongWalk v = current->verticalStep();
-            int va = longApproach(&v, lastTwo);
-            int x = startX;
-            int y = startY;
+            int va = longApproach(&v);
+            int x = 0;
+            int y = 0;
             getLongEndPoint(&v, x, y);
-            int parity = 0;
-            LongWalk combined = combineJailEscape(jail_steps, jail_length, &v);
-                if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
-                    return 2;
+            bool consistent = oneStepConsistentNarrow(&v, prevX, prevY, x, y);
+            if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistent && narrowExcluded(&v)) {
+                *jail = jailBackup;
+                return 2;
+            }
+            else if(longNoLoop(&v, 0, 0, x, y) && consistent) {
+                if(canEscape(va, x, y, minX, maxX, minY, maxY)) {
+                    *jail = jailBackup;
+                    return 1;
+                } else {
+                    escapes.push_back(v);
                 }
-                else if(longNoLoop(&v, startX, startY, x, y) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
-                    if(canEscape(va, x, y, minX, maxX, minY, maxY)) {
-                        return 1;
-                    } else {
-                        escapes.push_back(v);
-                    }
-                }
+            }
         }
         escapes.pop_front();
     }
     // All walks died, could not escape.
-    // if(test){
-    //     std::cout << "FAILED: " << toBinary(jail_steps, jail_length) << std::endl;
-    // }
+    *jail = jailBackup;
     return 0;
 }
 
@@ -569,13 +476,15 @@ uint64_t run(int n)
 {
     std::vector<State> walks;
     // H start.
-    walks.emplace_back(1, 0);
+    walks.emplace_back(0, 1, 0);
 
     uint64_t count = 0;
 
     while(!walks.empty()) {
         State current = walks.back();
         walks.pop_back();
+        int prevX = 0, prevY = 0;
+        getEndPoint(current.steps, current.length, prevX, prevY);
 
         // Horizontal Step.
         if(approach(current.steps, current.length) != 2 || current.length < 2) {
@@ -586,12 +495,12 @@ uint64_t run(int n)
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
-            int parity = 0;
-            if(noLoop(steps, length-12, sx, sy, x, y) && consistentNarrow(&walk, parity)) {
-                int forward_extendible = extendable(steps, length, x, y);
-                if(forward_extendible == 2 || (forward_extendible && extendable(steps, length, 0, 0))) {
+            walk.parity = current.parity;
+            if(noLoop(steps, length-12, sx, sy, x, y) && oneStepConsistentNarrow(&walk, prevX, prevY, x, y)) {
+                int forward_extendible = extendable(&walk, x, y);
+                if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
-                        walks.emplace_back(length, steps);
+                        walks.emplace_back(steps, length, walk.parity);
                     } else {
                         count++;
                     }
@@ -603,17 +512,17 @@ uint64_t run(int n)
        if(approach(current.steps, current.length) != 1 || current.length < 2) {
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps | (1ULL << current.length);
-            int x = 0, y = 0, sx = 0, sy = 0;
+            int x = 0, y = 0, _x = 0, _y = 0;
             getEndPoint(steps, length, x, y);
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
-            int parity = 0;
-            if(noLoop(steps, length-12, sx, sy, x, y) && consistentNarrow(&walk, parity)) {
-                int forward_extendible = extendable(steps, length, x, y);
-                if(forward_extendible == 2 || (forward_extendible && extendable(steps, length, 0, 0))) {
+            walk.parity = current.parity;
+            if(noLoop(steps, length-12, _x, _y, x, y) && oneStepConsistentNarrow(&walk, prevX, prevY, x, y)) {
+                int forward_extendible = extendable(&walk, x, y);
+                if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
-                        walks.emplace_back(length, steps);
+                        walks.emplace_back(steps, length, walk.parity);
                     } else {
                         count++;
                     }
