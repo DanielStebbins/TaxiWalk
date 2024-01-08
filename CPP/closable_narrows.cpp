@@ -30,9 +30,10 @@ std::string toBinary(uint64_t n, uint16_t len)
 struct State {
     uint64_t length;
     uint64_t steps;
+    uint8_t parity;
     
-    State(uint16_t length, uint64_t steps):
-        length(length), steps(steps) {}
+    State(uint64_t steps, uint16_t length, uint8_t parity):
+        steps(steps), length(length), parity(parity) {}
 };
 
 
@@ -41,15 +42,21 @@ const uint64_t max_bit = 1ULL << 63;
 struct LongWalk {
     std::vector<uint64_t> steps;
     uint16_t length;
+    uint8_t parity;
 
     // No steps, they will get added either with = or + later.
     LongWalk() {
         length = 0;
+        parity = 0;
     }
+
+    LongWalk(uint64_t steps, uint16_t length, uint8_t parity):
+        steps(steps), length(length), parity(parity) {}
 
     void operator=(const LongWalk &other) {
 		steps = other.steps;
         length = other.length;
+        parity = other.parity;
 	}
 
     LongWalk horizontalStep() {
@@ -57,7 +64,7 @@ struct LongWalk {
         if(!(result.length & 63)) {
             result.steps.push_back(0);
         }
-        result.length += 1;
+        result.length++;
         return result;
     }
 
@@ -69,7 +76,7 @@ struct LongWalk {
         } else {
             result.steps.push_back(1);
         }
-        result.length += 1;
+        result.length++;
         return result;
     }
 
@@ -123,10 +130,6 @@ struct LongWalk {
         return temp;
     }
 
-    // operator bool() {
-    //     return steps.size() > 1 || (steps.size() == 1 && steps[0] != 0ULL);
-    // }
-
     std::string to_string() const {
         if(steps.empty()) {
             return "Empty!";
@@ -152,10 +155,10 @@ struct LongWalk {
 	}
 };
 
-void getEndPoint(uint64_t steps, uint16_t length, int &x, int &y, bool reverse) {
+void getEndPoint(uint64_t steps, uint16_t length, int &x, int &y) {
     // Step direction impacted by the starting point (Manhattan Lattice).
-    int xStep = 1 - ((y & 1 ^ reverse) << 1);
-    int yStep = 1 - ((x & 1 ^ reverse) << 1);
+    int xStep = 1 - ((y & 1) << 1);
+    int yStep = 1 - ((x & 1) << 1);
     for(int i = 0; i < length; ++i) {
         if(steps & 1) {
             y += yStep;
@@ -168,22 +171,22 @@ void getEndPoint(uint64_t steps, uint16_t length, int &x, int &y, bool reverse) 
     }
 }
 
-void getLongEndPoint(LongWalk *walk, int &x, int &y, bool reverse) {
+void getLongEndPoint(LongWalk *walk, int &x, int &y) {
     if(walk->steps.empty()) {
         x = 0;
         y = 0;
     } else {
         for(int i = 0; i < walk->steps.size() - 1; i++) {
-            getEndPoint(walk->steps[i], 64, x, y, reverse);
+            getEndPoint(walk->steps[i], 64, x, y);
         }
-        getEndPoint(walk->steps.back(), walk->length & 63, x, y, reverse);
+        getEndPoint(walk->steps.back(), walk->length & 63, x, y);
     }
 }
 
 
-bool noLoop(uint64_t steps, int limit, int &x, int &y, int endX, int endY, bool reverse) {
-    int xStep = 1 - ((y & 1 ^ reverse) << 1);
-    int yStep = 1 - ((x & 1 ^ reverse) << 1);
+bool noLoop(uint64_t steps, int limit, int &x, int &y, int endX, int endY) {
+    int xStep = 1 - ((y & 1) << 1);
+    int yStep = 1 - ((x & 1) << 1);
     bool noLoop = x != endX || y != endY;
     int i = 0;
     // Limit can be decreased to length-12 for most checks, but not all. Decide when passing length in.
@@ -202,14 +205,14 @@ bool noLoop(uint64_t steps, int limit, int &x, int &y, int endX, int endY, bool 
     return noLoop;
 }
 
-bool longNoLoop(LongWalk *walk, int x, int y, int endX, int endY, bool reverse) {
+bool longNoLoop(LongWalk *walk, int x, int y, int endX, int endY) {
     bool flag = true;
     int i = 0;
     while(flag && i < walk->steps.size() - 1) {
-        flag = noLoop(walk->steps[i], 64, x, y, endX, endY, reverse);
+        flag = noLoop(walk->steps[i], 64, x, y, endX, endY);
         ++i;
     }
-    return flag && noLoop(walk->steps.back(), (walk->length & 63) - 12, x, y, endX, endY, reverse);
+    return flag && noLoop(walk->steps.back(), (walk->length & 63) - 12, x, y, endX, endY);
 }
 
 
@@ -278,28 +281,16 @@ void getBoundingBox(uint64_t steps, uint16_t length, int &minX, int &maxX, int &
 
 
 // "On the minX boundary, horizontal step goes left (-x), and taking that horizontal step doesn't break the 2-turn rule (should never be less than length 2)".
-inline bool canEscape(int approach, int x, int y, int minX, int maxX, int minY, int maxY, bool reverse) {   
-    return (x == minX && (y & 1 ^ reverse) || x == maxX && !(y & 1 ^ reverse)) && (approach != 2)
-            || (y == minY && (x & 1 ^ reverse) || y == maxY && !(x & 1 ^ reverse)) && (approach != 1);
+inline bool canEscape(int approach, int x, int y, int minX, int maxX, int minY, int maxY) {   
+    return (x == minX && (y & 1) || x == maxX && !(y & 1)) && (approach != 2)
+            || (y == minY && (x & 1) || y == maxY && !(x & 1)) && (approach != 1);
 }
 
-LongWalk combineJailEscape(uint64_t jail_steps, uint16_t jail_length, LongWalk *escape, bool reverse) {
-    if(reverse) {
-        LongWalk temp = escape->flip();
-        for(int i = 0; i < jail_length; i++) {
-            if((jail_steps >> i) & 1) {
-                temp = temp.verticalStep();
-            } else {
-                temp = temp.horizontalStep();
-            }
-        }
-        return temp;
-    } else {
-        LongWalk temp;
-        temp.steps.push_back(jail_steps);
-        temp.length = jail_length;
-        return temp.append(*escape);
-    }
+LongWalk combineJailEscape(uint64_t jail_steps, uint16_t jail_length, LongWalk *escape) {
+    LongWalk temp;
+    temp.steps.push_back(jail_steps);
+    temp.length = jail_length;
+    return temp.append(*escape);
 }
 
 
@@ -474,13 +465,30 @@ bool narrowExcluded(LongWalk *walk, int parity) {
 }
 
 
+// Flips the bits of a walk for the backwards extendability check.
+uint64_t reverse(uint64_t steps, uint16_t length) {
+    uint64_t tempSteps = 0ULL;
+    for(int i = 0; i < length; i++) {
+        tempSteps <<= 1;
+        tempSteps |= (steps >> i) & 1;
+    }
+    return tempSteps;
+}
+
+
 // Can some valid walk go from the given point (one of the endpoints of the walk we're testing)
 // to the bounding box of the walk (minX to maxX, minY to maxY)? Or do all walks originating at
 // the given point die out?
 // Returns 0 if not extendable (boxed), 1 if extendable (escapes bounding box), 2 if encountered the goal point.
-int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY, int goalX, int goalY, bool reverse) {
+int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY) {
     if(jail_length < 10) {
         return 2;
+    }
+
+    // Fips the walk. Start at origin only if called from reverse call or polygon, reversing a polygon does nothing.
+    if(startX == 0 && startY == 0) {
+        jail_steps = reverse(jail_steps, jail_length);
+        getEndPoint(jail_steps, jail_length, startX, startY);
     }
 
     int minX = 0, maxX = 0, minY = 0, maxY = 0;
@@ -488,14 +496,9 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
 
     int firstTwoFlipped = ((jail_steps & 1) << 1) | ((jail_steps >> 1) & 1);
     int lastTwo = approach(jail_steps, jail_length);
-    if(reverse) {
-        int temp = firstTwoFlipped;
-        firstTwoFlipped = lastTwo;
-        lastTwo = temp;
-    }
 
     // Can escape with a single step from the end of the jail, hopefully a good number fall into this case.
-    if(canEscape(lastTwo, startX, startY, minX, maxX, minY, maxY, reverse)) {
+    if(canEscape(lastTwo, startX, startY, minX, maxX, minY, maxY)) {
         return 1;
     }
 
@@ -508,7 +511,7 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
         int a = longApproach(current, lastTwo);
         int prevX = startX;
         int prevY = startY;
-        getLongEndPoint(current, prevX, prevY, reverse);
+        getLongEndPoint(current, prevX, prevY);
 
         // Horizontal Step.
         if(a != 2) {
@@ -516,14 +519,14 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
             int ha = longApproach(&h, lastTwo);
             int x = startX;
             int y = startY;
-            getLongEndPoint(&h, x, y, reverse);
-            LongWalk combined = combineJailEscape(jail_steps, jail_length, &h, reverse);
+            getLongEndPoint(&h, x, y);
+            LongWalk combined = combineJailEscape(jail_steps, jail_length, &h);
             int parity = 0;
-            if(x == goalX && y == goalY && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
+            if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
                 return 2;
             }
-            else if(longNoLoop(&h, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
-                if(canEscape(ha, x, y, minX, maxX, minY, maxY, reverse)) {
+            else if(longNoLoop(&h, startX, startY, x, y) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
+                if(canEscape(ha, x, y, minX, maxX, minY, maxY)) {
                     return 1;
                 } else {
                     escapes.push_back(h);
@@ -537,14 +540,14 @@ int extendable(uint64_t jail_steps, uint16_t jail_length, int startX, int startY
             int va = longApproach(&v, lastTwo);
             int x = startX;
             int y = startY;
-            getLongEndPoint(&v, x, y, reverse);
+            getLongEndPoint(&v, x, y);
             int parity = 0;
-            LongWalk combined = combineJailEscape(jail_steps, jail_length, &v, reverse);
-                if(x == goalX && y == goalY && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
+            LongWalk combined = combineJailEscape(jail_steps, jail_length, &v);
+                if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistentNarrow(&combined, parity) && narrowExcluded(&combined, parity)) {
                     return 2;
                 }
-                else if(longNoLoop(&v, startX, startY, x, y, reverse) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
-                    if(canEscape(va, x, y, minX, maxX, minY, maxY, reverse)) {
+                else if(longNoLoop(&v, startX, startY, x, y) && noIntersection(jail_steps, jail_length, x, y) && consistentNarrow(&combined, parity)) {
+                    if(canEscape(va, x, y, minX, maxX, minY, maxY)) {
                         return 1;
                     } else {
                         escapes.push_back(v);
@@ -579,21 +582,18 @@ uint64_t run(int n)
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps;
             int x = 0, y = 0, sx = 0, sy = 0;
-            getEndPoint(steps, length, x, y, false);
+            getEndPoint(steps, length, x, y);
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
             int parity = 0;
-            if(noLoop(steps, length-12, sx, sy, x, y, false) && consistentNarrow(&walk, parity)) {
-                int forward_extendible = extendable(steps, length, x, y, 0, 0, false);
-                if(forward_extendible == 2 || (forward_extendible && extendable(steps, length, 0, 0, x, y, true))) {
+            if(noLoop(steps, length-12, sx, sy, x, y) && consistentNarrow(&walk, parity)) {
+                int forward_extendible = extendable(steps, length, x, y);
+                if(forward_extendible == 2 || (forward_extendible && extendable(steps, length, 0, 0))) {
                     if(length != n) {
                         walks.emplace_back(length, steps);
                     } else {
                         count++;
-                        // if((count & 32767) == 0) {
-                        //     std::cout << toBinary(steps, length) << std::endl;
-                        // }
                     }
                 }
             }
@@ -604,21 +604,18 @@ uint64_t run(int n)
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps | (1ULL << current.length);
             int x = 0, y = 0, sx = 0, sy = 0;
-            getEndPoint(steps, length, x, y, false);
+            getEndPoint(steps, length, x, y);
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
             int parity = 0;
-            if(noLoop(steps, length-12, sx, sy, x, y, false) && consistentNarrow(&walk, parity)) {
-                int forward_extendible = extendable(steps, length, x, y, 0, 0, false);
-                if(forward_extendible == 2 || (forward_extendible && extendable(steps, length, 0, 0, x, y, true))) {
+            if(noLoop(steps, length-12, sx, sy, x, y) && consistentNarrow(&walk, parity)) {
+                int forward_extendible = extendable(steps, length, x, y);
+                if(forward_extendible == 2 || (forward_extendible && extendable(steps, length, 0, 0))) {
                     if(length != n) {
                         walks.emplace_back(length, steps);
                     } else {
                         count++;
-                        // if((count & 32767) == 0) {
-                        //     std::cout << toBinary(steps, length) << std::endl;
-                        // }
                     }
                 }
             }
