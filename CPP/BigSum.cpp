@@ -96,7 +96,6 @@ struct BigSum {
                 ++i;
             }
             return out.substr(i);
-            return out;
         }
     }
 
@@ -238,12 +237,23 @@ std::vector<State> makeAutomaton(int n)
             getPoint(steps, length, x, y);
             if(noLoop(steps, length, x, y))
             {
+                bool flag = length == 16 && steps == 0b0001100011100000;
+                if(flag) {
+                    std::cout << "Before Reduce: " << toBinary(steps, length) << std::endl;
+                }
                 reduce(steps, length, x, y, n, stepsToOrigin);
+
+                if(flag) {
+                    std::cout << "After Reduce: " << toBinary(steps, length) << std::endl;
+                }
 
                 State parent = states[0];
                 uint64_t tempSteps = steps;
                 for(int i = 0; i < length - 1; ++i)
                 {
+                    if(flag) {
+                        std::cout << "Parent: " << toBinary(parent.var1.segments[0], parent.var2.segments[0]) << std::endl;
+                    }
                     parent = *parent.children[tempSteps & 1];
                     tempSteps >>= 1;
                 }
@@ -333,27 +343,28 @@ BigSum taxi(int automaton_size, int num_iterations)
             state.var1 = state.var2;
             state.var2 = 0;
         }
-
-        // if((n + 1) % 50 == 0) {
-            // std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << "." << std::endl;
-            // BigSum taxiWalks = 0;
-            // for(auto & state : automaton)
-            // {
-            //     if(state.var1)
-            //     {
-            //         if(state.children[0])
-            //         {
-            //             taxiWalks += state.var1;
-            //         }
-            //         if(state.children[1])
-            //         {
-            //             taxiWalks += state.var1;
-            //         }
-            //     }
-            // }
-            // std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
-        // }
     }
+
+    //     if((n + 1) % 50 == 0) {
+    //         // std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << "." << std::endl;
+    //         BigSum taxiWalks = 0;
+    //         for(auto & state : automaton)
+    //         {
+    //             if(state.var1)
+    //             {
+    //                 if(state.children[0])
+    //                 {
+    //                     taxiWalks += state.var1;
+    //                 }
+    //                 if(state.children[1])
+    //                 {
+    //                     taxiWalks += state.var1;
+    //                 }
+    //             }
+    //         }
+    //         std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
+    //     }
+    // }
     // return 0;
 
     std::cout << "Computing final sum..." << std::endl;
@@ -363,12 +374,12 @@ BigSum taxi(int automaton_size, int num_iterations)
     {
         if(state.var1)
         {
-            // if(state.children[0])
-            if(state.children[0] && (state.children[0]->children[0] || state.children[0]->children[1])) {
+            if(state.children[0])
+            {
                 taxiWalks += state.var1;
             }
-            // if(state.children[1])
-            if(state.children[1] && (state.children[1]->children[0] || state.children[1]->children[1])) {
+            if(state.children[1])
+            {
                 taxiWalks += state.var1;
             }
         }

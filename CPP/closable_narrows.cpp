@@ -80,32 +80,6 @@ struct LongWalk {
         return result;
     }
 
-    LongWalk append(LongWalk other) {
-        LongWalk out = *this;
-        for(int i = 0; i < other.steps.size() - 1; i++) {
-            uint64_t tempSteps = other.steps[i];
-            for(int j = 0; j < 64; j++) {
-                if(tempSteps & 1) {
-                    out = out.verticalStep();
-                } else {
-                    out = out.horizontalStep();
-                }
-                tempSteps >>= 1;
-            }
-        }
-        int m = other.length & 63;
-        uint64_t tempSteps = other.steps.back();
-        for(int j = 0; j < m; j++) {
-            if(tempSteps & 1) {
-                out = out.verticalStep();
-            } else {
-                out = out.horizontalStep();
-            }
-            tempSteps >>= 1;
-        }
-        return out;
-    }
-
     std::string to_string() const {
         if(steps.empty()) {
             return "Empty!";
@@ -190,30 +164,6 @@ bool longNoLoop(LongWalk *walk, int x, int y, int endX, int endY) {
     }
     return flag && noLoop(walk->steps.back(), (walk->length & 63) - 12, x, y, endX, endY);
 }
-
-
-bool noIntersection(uint64_t steps, uint16_t length, int x, int y) {
-    int cx = 0;
-    int xStep = 1;
-    int cy = 0;
-    int yStep = 1;
-    bool noIntersection = cx != x || cy != y;
-    int i = 0;
-    while(noIntersection && i < length) {
-        if(steps & 1) {
-            cy += yStep;
-            xStep = -xStep;
-        } else {
-            cx += xStep;
-            yStep = -yStep;
-        }
-        noIntersection = cx != x || cy != y;
-        steps >>= 1;
-        ++i;
-    }
-    return noIntersection;
-}
-
 
 // HH -> 00 (0)
 // HV -> 10 (2)
@@ -471,6 +421,9 @@ int extendable(LongWalk *jail, int startX, int startY) {
 }
 
 
+// TODO: connect up the closable narrow into the run function.
+
+
 
 uint64_t run(int n)
 {
@@ -490,13 +443,13 @@ uint64_t run(int n)
         if(approach(current.steps, current.length) != 2 || current.length < 2) {
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps;
-            int x = 0, y = 0, sx = 0, sy = 0;
+            int x = 0, y = 0, _x = 0, _y = 0;
             getEndPoint(steps, length, x, y);
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
             walk.parity = current.parity;
-            if(noLoop(steps, length-12, sx, sy, x, y) && oneStepConsistentNarrow(&walk, prevX, prevY, x, y)) {
+            if(noLoop(steps, length-12, _x, _y, x, y) && oneStepConsistentNarrow(&walk, prevX, prevY, x, y)) {
                 int forward_extendible = extendable(&walk, x, y);
                 if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
