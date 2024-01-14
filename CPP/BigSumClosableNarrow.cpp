@@ -8,20 +8,16 @@
 #include <deque>
 #include <algorithm>
 
-std::string toBinary(uint64_t steps, uint16_t length)
-{
+std::string toBinary(uint64_t steps, uint16_t length) {
     if(length == 0) {
         return "Origin";
     }
     std::string binary;
     for(uint16_t i = 0; i < length; i++)
     {
-        if((steps >> (length - 1 - i)) & 1)
-        {
+        if((steps >> (length - 1 - i)) & 1) {
             binary += "1";
-        }
-        else
-        {
+        } else {
             binary += "0";
         }
     }
@@ -79,7 +75,7 @@ inline bool canEscape(int approach, int x, int y, int minX, int maxX, int minY, 
             || (y == minY && (x & 1) || y == maxY && !(x & 1)) && (approach != 1);
 }
 
-// Returns the parity of this section.
+// Returns the clockwiseness of this section.
 int narrow64(uint64_t steps, uint16_t length, int &x1, int &y1, int &x2, int &y2, int x3, int y3, int x4, int y4) {
     int xStep = 1;
     int yStep = 1;
@@ -95,9 +91,13 @@ int narrow64(uint64_t steps, uint16_t length, int &x1, int &y1, int &x2, int &y2
         }
         steps >>= 1;
 
-        if(abs(x4 - x1) + abs(y4 - y1) == 1 && abs(x3 - x2) + abs(y3 - y2) == 1) {
-            // The parity of the number of steps taken gives the parity of the point (x1, y1).
+        // Vertical narrow (x coords off by one, y coords equal).
+        if(abs(x4 - x1) == 1 && abs(y4 - y1) == 0 && abs(x3 - x2) == 1 && abs(y3 - y2) == 0) {
+            // The parity of the number of steps taken gives the parity of the point (x1, y1). Odd goes clockwise, even counterclockwise.
             return i & 1;
+        } else if(abs(x4 - x1) == 0 && abs(y4 - y1) == 1 && abs(x3 - x2) == 0 && abs(y3 - y2) == 1) {
+            // Odd goes counterclockwise, even clockwise.
+            return !(i & 1);
         }
     }
     return -1;
@@ -170,7 +170,6 @@ struct BigSum {
                 ++i;
             }
             return out.substr(i);
-            return out;
         }
     }
 
@@ -183,7 +182,7 @@ struct BigSum {
 
 struct LongWalk {
     BigSum var1; // Steps and count1.
-    BigSum var2; // Length/narrowCount/parity and count2. Parity uses leftmost bit, narrowCount uses the next 7 bits, length uses rightmost 56 bits. Never longer than 1 u64 in the walk phase.
+    BigSum var2; // Length/narrowCount/clockwiseness and count2. Clockwise uses leftmost bit, narrowCount uses the next 7 bits, length uses rightmost 56 bits. Never longer than 1 u64 in the walk phase.
 
     // No steps, they will get added either with = or + later.
     LongWalk() {
@@ -191,9 +190,9 @@ struct LongWalk {
         var2 = 0ULL;
     }
 
-    LongWalk(uint64_t steps, uint64_t length, uint64_t parity, uint64_t narrowCount):
+    LongWalk(uint64_t steps, uint64_t length, uint64_t clockwiseClose, uint64_t narrowCount):
         var1(steps) {
-            var2 = (parity << 63) + (narrowCount << 56) + length;
+            var2 = (clockwiseClose << 63) + (narrowCount << 56) + length;
         }
 
     void operator=(const LongWalk &other) {
@@ -203,18 +202,21 @@ struct LongWalk {
 
     // Bitpacking convenience functions for var2.
     inline std::vector<uint64_t> *steps() { return &var1.segments; }
-    inline uint64_t lazyLength() { return var2.segments[0]; } // Only use when immediately & 63 or some other small number.
+    // Length 0 -> 0, length 63 -> 63, length 64 -> 64, length 100 -> 36, length 128 -> 64. Remember that the empty walk still has a segment.
+    inline uint64_t lastSegmentLength() { 
+        return getLength() - (64 * ((*steps()).size() - 1));
+    }
     inline uint64_t getLength() { return var2.segments[0] & 0x00FFFFFFFFFFFFFFULL; }
     inline uint8_t getNarrowCount() { return (var2.segments[0] >> 56) & 0x7F; }
-    inline uint8_t getParity() { return var2.segments[0] >> 63; }
+    inline uint8_t clockwiseClose() { return var2.segments[0] >> 63; }
     inline void setLength(uint64_t length) { var2.segments[0] = (var2.segments[0] & 0xFF00000000000000ULL) + length; }
     inline void setNarrowCount(uint64_t narrowCount) { var2.segments[0] = (var2.segments[0] & 0x80FFFFFFFFFFFFFFULL) + (narrowCount << 56); }
-    inline void setParity(uint64_t parity) { var2.segments[0] = (parity << 63) + (var2.segments[0] & 0x7FFFFFFFFFFFFFFFULL); }
+    inline void setClockwiseClose(uint64_t clockwise) { var2.segments[0] = (clockwise << 63) + (var2.segments[0] & 0x7FFFFFFFFFFFFFFFULL); }
 
     LongWalk horizontalStep() {
         LongWalk result = *this;
         uint64_t length = getLength();
-        if(length && (length & 63) == 0) {
+        if(lastSegmentLength() == 64) {
             result.var1.segments.push_back(0);
         }
         result.var2 += 1;
@@ -224,10 +226,10 @@ struct LongWalk {
     LongWalk verticalStep() {
         LongWalk result = *this;
         uint64_t length = getLength();
-        int m = length & 63;
+        int m = lastSegmentLength();
         // std::cout << "V length: " << length << " " << m << std::endl;
         // std::cout << result.steps()->size() << std::endl;
-        if(length && !m) {
+        if(m == 64) {
             result.steps()->push_back(1);
         } else {
             result.steps()->back() |= 1ULL << m;  
@@ -247,8 +249,8 @@ struct LongWalk {
                 // std::cout << "More endpoint calls" << std::endl;
                 getEndPoint64((*steps())[i], 64, x, y);
             }
-            // std::cout << steps()->back() << " " << (lazyLength() & 63) << " " << x << "," << y << std::endl;
-            getEndPoint64(steps()->back(), lazyLength() & 63, x, y);
+            // std::cout << steps()->back() << " " << lastSegmentLength() << " " << x << "," << y << std::endl;
+            getEndPoint64(steps()->back(), lastSegmentLength(), x, y);
         }
     }
 
@@ -259,11 +261,11 @@ struct LongWalk {
             flag = noLoop64((*steps())[i], 64, x, y, endX, endY);
             ++i;
         }
-        return flag && noLoop64(steps()->back(), (lazyLength() & 63) - 12, x, y, endX, endY);
+        return flag && noLoop64(steps()->back(), lastSegmentLength() - 12, x, y, endX, endY);
     }
 
     inline int approach() {
-        return approach64(steps()->back(), lazyLength() & 63);
+        return approach64(steps()->back(), lastSegmentLength());
     }
 
     void getBoundingBox(int &minX, int &maxX, int &minY, int &maxY) {
@@ -289,7 +291,7 @@ struct LongWalk {
 
     // 0 for none found, 1 for odd start vertex, 2 for even start vertex (the vertex closest to the start of the walk).
     // At this level, return the first one. In the rare case there are several per x3y3 x4y4, they will still be caught.
-    int narrowParityEnd(int x3, int y3, int x4, int y4) {
+    int narrowClockwisenessEnd(int x3, int y3, int x4, int y4) {
         if(getLength() < 10) {
             return -1;
         }
@@ -313,12 +315,12 @@ struct LongWalk {
 
     // For when a single step is added to the end of a walk whose parity is known.
     bool consistentNarrow(int x3, int y3, int x4, int y4) {
-        int newParity = narrowParityEnd(x3, y3, x4, y4);
-        if(newParity != -1) {
-            if(getNarrowCount() && getParity() != newParity) {
+        int newClockwiseness = narrowClockwisenessEnd(x3, y3, x4, y4);
+        if(newClockwiseness != -1) {
+            if(getNarrowCount() && clockwiseClose() != newClockwiseness) {
                 return false;
             } else {
-                setParity(newParity);
+                setClockwiseClose(newClockwiseness);
                 setNarrowCount(getNarrowCount() + 1);
             }
         }
@@ -393,7 +395,7 @@ struct LongWalk {
                 tempSteps >>= 1;
             }
         }
-        int m = lazyLength() & 63;
+        int m = lastSegmentLength();
         uint64_t tempSteps = steps()->back();
         for(int j = 0; j < m; j++) {
             int step = tempSteps & 1;
@@ -413,7 +415,8 @@ struct LongWalk {
         leftTurns += (!prevStep && step && !diff) || ((prevStep == 1) && !step && diff);
 
         // Parity 1 -> v1 odd and must be clockwise, parity 0 -> v1 even must be counterclockwise.
-        return getParity() == (rightTurns > leftTurns);
+        // std::cout << "P:"<< (int) clockwiseClose() << " R:" << rightTurns << " L:" << leftTurns << std::endl;
+        return clockwiseClose() == (rightTurns > leftTurns);
     }
 
 
@@ -436,15 +439,19 @@ struct LongWalk {
         if(getLength() < 10) {
             return 2;
         }
-
+        // if(getLength() == 42 && (*steps())[0] == 0b100011111000001100001111111000000110001110ULL) {
+            // std::cout << "Extendible?" << std::endl;
+        // }
         LongWalk jailBackup = *this;
         // Fips the walk. Start at origin only if called from reverse call or polygon, reversing a polygon does nothing.
         if(startX == 0 && startY == 0) {
             // Jail is never longer than 64 steps.
-            // CAN I SET STEPS LIKE THIS?
+            // if(getLength() == 42 && (*steps())[0] == 0b100011111000001100001111111000000110001110ULL) {
+                // std::cout << "Backwards Extendible?" << std::endl;
+            // }
             reverse();
-            if(getNarrowCount() && (lazyLength() & 1) == 0) {
-                setParity(!getParity());
+            if(getNarrowCount() && (getLength() & 1) == 0) {
+                setClockwiseClose(!clockwiseClose());
             }
             getEndPoint(startX, startY);
         }
@@ -469,6 +476,9 @@ struct LongWalk {
             int prevX = 0;
             int prevY = 0;
             current->getEndPoint(prevX, prevY);
+            if(getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                std::cout << "Escape: " << toBinary((*current->steps())[0], current->getLength()) << std::endl;
+            }
 
             // Horizontal Step.
             if(a != 2) {
@@ -477,14 +487,26 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 h.getEndPoint(x, y);
+                if(getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                    std::cout << "EH: " << toBinary((*h.steps())[0], h.getLength()) << std::endl;
+                }
                 bool consistent = h.consistentNarrow(prevX, prevY, x, y);
+                if(x == 0 && y == 0 && getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                    std::cout << "POLYGON! C:" << (int) consistent << " CW:" << (int) h.clockwiseClose() << " NE:" << h.narrowExcluded() << std::endl;
+                }
                 if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistent && h.narrowExcluded()) {
                     *this = jailBackup;
+                    if(getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                        std::cout << "EH1: " << toBinary((*h.steps())[0], h.getLength()) << std::endl;
+                    }
                     return 2;
                 }
                 else if(h.noLoop(x, y) && consistent) {
                     if(canEscape(ha, x, y, minX, maxX, minY, maxY)) {
                         *this = jailBackup;
+                        if(getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                            std::cout << "EH2: " << toBinary((*h.steps())[0], h.getLength()) << std::endl;
+                        }
                         return 1;
                     } else {
                         escapes.push_back(h);
@@ -499,14 +521,26 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 v.getEndPoint(x, y);
+                if(getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                    std::cout << "EV: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
+                }
                 bool consistent = v.consistentNarrow(prevX, prevY, x, y);
+                if(x == 0 && y == 0 && getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                    std::cout << "POLYGON! C:" << (int) consistent << " CW:" << (int) v.clockwiseClose() << " NE:" << v.narrowExcluded() << std::endl;
+                }
                 if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistent && v.narrowExcluded()) {
                     *this = jailBackup;
+                    if(getLength() == 42 && (*steps())[0] == 0b100011111000001100001111111000000110001110ULL) {
+                        std::cout << "EV: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
+                    }
                     return 2;
                 }
                 else if(v.noLoop(x, y) && consistent) {
                     if(canEscape(va, x, y, minX, maxX, minY, maxY)) {
                         *this = jailBackup;
+                        if(getLength() == 43 && (*steps())[0] == 0b1100011001100000000011111001100011110001100ULL) {
+                            std::cout << "EV: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
+                        }
                         return 1;
                     } else {
                         escapes.push_back(v);
@@ -523,12 +557,13 @@ struct LongWalk {
     void reduce(int endX, int endY, int n, std::vector<int> const &stepsToOrigin) {
         uint64_t tempSteps = (*steps())[0];
         uint64_t length = getLength();
-        uint64_t parity = getParity();
+        uint64_t clockwise = clockwiseClose();
 
         // std::cout << "Reducing: " << toBinary(tempSteps, length) << " with endpoint: " << endX << ", " << endY << std::endl;
-
+        // std::cout << approach64(tempSteps, length) << " " << endX << " " << endY << std::endl;
         while(stepsToOrigin[approach64(tempSteps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length) {
             // About to remove a narrow.
+            // std::cout << "1" << std::endl;
             if(firstStepNarrow()) {
                 setNarrowCount(getNarrowCount() - 1);
             }
@@ -544,7 +579,7 @@ struct LongWalk {
 
             tempSteps >>= 1;
             --length;
-            parity = !parity; // Parity flips when you remove a step from the beginning.
+            clockwise = !clockwise; // Clockwiseness flips when you remove a step from the beginning.
 
             if(tempSteps & 1) {
                 tempSteps ^= (1ULL << length) - 1;
@@ -553,6 +588,7 @@ struct LongWalk {
                 endY = temp;
             }
         }
+        // std::cout << "1.5" << std::endl;
 
         // If first step is vertical, flip to horizontal.
         if(tempSteps & 1) {
@@ -561,7 +597,8 @@ struct LongWalk {
 
         var1.segments[0] = tempSteps;
         setLength(length);
-        setParity(parity);
+        setClockwiseClose(clockwise);
+        // std::cout << "2" << std::endl;
     }
 
     std::string to_string() const {
@@ -592,12 +629,22 @@ struct State {
     LongWalk walk; // The walk (steps, length, parity), then the sum counts.
     State *children[2]{};
 
-    State(uint64_t steps, uint64_t length, bool parity, uint8_t narrowCount):
-        walk(steps, length, parity, narrowCount), children{nullptr,nullptr} {}
+    // Zero as the default child index should be ok because no paths reduce to nothing.
+    State(uint64_t steps, uint64_t length, bool clockwiseClose, uint8_t narrowCount):
+        walk(steps, length, clockwiseClose, narrowCount), children{nullptr,nullptr} {}
 
     State(LongWalk walk):
         walk(walk), children{nullptr,nullptr} {}
 };
+
+// struct CountState {
+//     BigSum var1;
+//     BigSum var2;
+//     CountState *children[2]{};
+
+//     CountState(CountState *leftChild, CountState *rightChild):
+//         var1(0), var2(0), children{leftChild, rightChild} {}
+// };
 
 std::vector<int> getStepsToOrigin() {
     std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToOriginFlipped.txt)");
@@ -611,51 +658,102 @@ std::vector<int> getStepsToOrigin() {
     return stepsToOrigin;
 }
 
+
 std::vector<State> makeAutomaton(int n) {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
 
     std::vector<State> states;
-    states.reserve(91355000);
+    // states.reserve(91355100);
+    states.reserve(307000000);
     states.emplace_back(0, 0, 0, 0);
 
     uint64_t untreated = 0;
+    State *prevPointer = nullptr;
+
 
     while(untreated < states.size()) {
-        // std::cout << toBinary((*states[untreated].walk.steps())[0], states[untreated].walk.getLength()) << std::endl;
         // Horizontal Step.
+        if(prevPointer && states[0].children[0] && (prevPointer->walk.var1 != states[0].children[0]->walk.var1 || prevPointer->walk.var2 != states[0].children[0]->walk.var2)) {
+            std::cout << "H object changed from " << toBinary((*prevPointer->walk.steps())[0], prevPointer->walk.getLength()) << " to " << toBinary((*states[0].children[0]->walk.steps())[0], states[0].children[0]->walk.getLength()) << " on walk " << toBinary((*states[untreated - 1].walk.steps())[0], states[untreated - 1].walk.getLength()) << std::endl;
+        }
+        if(states[0].children[0] != prevPointer) {
+            std::cout << "H pointer changed from " << prevPointer << " to " << states[0].children[0] << " on walk " << toBinary((*states[untreated - 1].walk.steps())[0], states[untreated - 1].walk.getLength()) << std::endl;
+            prevPointer = states[0].children[0];
+            State test = *prevPointer;
+            std::cout << "Dereferenced" << std::endl;
+            std::cout << "Dereferenced: " << toBinary((*test.walk.steps())[0], test.walk.getLength()) << std::endl;
+        }
+        
         int prevX = 0, prevY = 0;
         states[untreated].walk.getEndPoint(prevX, prevY);
+        // if(states[untreated].walk.getLength() >= 42) {
+        //     std::cout << toBinary((*states[untreated].walk.steps())[0], states[untreated].walk.getLength()) << std::endl;
+        // }
+        // if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+        //     std::cout << "Current: " << toBinary((*states[untreated].walk.steps())[0], states[untreated].walk.getLength()) << std::endl;
+        // }
+
         if(states[untreated].walk.approach() != 2 || states[untreated].walk.getLength() < 2) {
             // uint16_t length = states[untreated].walk.getLength() + 1;
             // uint64_t steps = states[untreated].walk.steps()[0];
             LongWalk h = states[untreated].walk.horizontalStep();
+            if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                std::cout << "H: " << toBinary((*h.steps())[0], h.getLength()) << std::endl;
+            }
             // std::cout << "H: " << toBinary((*h.steps())[0], h.getLength()) << std::endl;
 
             int x = 0, y = 0;
             h.getEndPoint(x, y);
-            if(h.noLoop(x, y)) {
-                // std::cout << "No Loop" << std::endl;
-                h.reduce(x, y, n, stepsToOrigin);
-                // std::cout << "After Reduce: " << toBinary((*h.steps())[0], h.getLength()) << std::endl;
-                // std::cout << "here 1" << std::endl;
+            if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y)) {
+                int forward_extendible = h.extendable(x, y);
+                // if(states[untreated].walk.getLength() == 41 && (*states[untreated].walk.steps())[0] == 0b00011111000001100001111111000000110001110ULL) {
+                //     std::cout << "forward_extendible=" << forward_extendible << std::endl;
+                // }
                 
-                State parent = states[0];
-                uint64_t tempSteps = (*h.steps())[0];
-                for(int i = 0; i < h.getLength() - 1; ++i) {
-                    // std::cout << toBinary((*parent.walk.steps())[0], parent.walk.getLength()) << std::endl;
-                    parent = *parent.children[tempSteps & 1];
-                    tempSteps >>= 1;
-                }
+                // std::cout << states[0].children[0] << std::endl;
+                // if(states[0].children[0]) {
+                //     std::cout << "H Child: " << toBinary((*states[0].children[0]->walk.steps())[0], states[0].children[0]->walk.getLength()) << std::endl;
+                // }
 
-                // std::cout << "here 3" << std::endl;
-
-                if(!parent.children[tempSteps]) {
-                    // std::cout << "Added" << std::endl;
-                    states.emplace_back(h);
-                    states[untreated].children[0] = &states[states.size() - 1];
-                } else {
-                    states[untreated].children[0] = parent.children[tempSteps];
+                if(states[untreated].walk.getLength() == 41 && (*states[untreated].walk.steps())[0] == 0b00011111000001100001111111000000110001110ULL) {
+                    std::cout << "forward_extendible=" << forward_extendible << std::endl;
                 }
+                if(forward_extendible == 2 || (forward_extendible && h.extendable(0, 0))) {
+                    if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                        std::cout << "No Loop, Extendible" << std::endl;
+                    }
+                    h.reduce(x, y, n, stepsToOrigin);
+                    if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                        std::cout << "After Reduce: " << toBinary((*h.steps())[0], h.getLength()) << std::endl;
+                    }
+                    
+                    State parent = states[0];
+                    uint64_t tempSteps = (*h.steps())[0];
+                    for(int i = 0; i < h.getLength() - 1; ++i) {
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Parent: " << toBinary((*parent.walk.steps())[0], parent.walk.getLength()) << std::endl;
+                        }
+
+                        if(!(parent.children[tempSteps & 1])) {
+                            std::cout << "H Parent Fail: " << toBinary((*states[untreated].walk.steps())[0], states[untreated].walk.getLength()) << std::endl;
+                        }
+                        
+                        parent = *parent.children[tempSteps & 1];
+                        tempSteps >>= 1;
+                    }
+                    if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                        std::cout << "here 3" << std::endl;
+                    }
+                    if(!parent.children[tempSteps]) {
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Added" << std::endl;
+                        }
+                        states.emplace_back(h);
+                        states[untreated].children[0] = &states[states.size() - 1];
+                    } else {
+                        states[untreated].children[0] = parent.children[tempSteps];
+                    }
+                }                
             }
         }
 
@@ -664,31 +762,89 @@ std::vector<State> makeAutomaton(int n) {
             // uint16_t length = states[untreated].walk.getLength() + 1;
             // uint64_t steps = states[untreated].walk.steps()[0] | (1ULL << states[untreated].walk.getLength());
             LongWalk v = states[untreated].walk.verticalStep();
+            if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                std::cout << "V: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
+            }
             // std::cout << "V: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
             int x = 0, y = 0;
             v.getEndPoint(x, y);
-            if(v.noLoop(x, y)) { // && v.consistentNarrow(prevX, prevY, x, y)
-                // std::cout << "No Loop" << std::endl;
-                v.reduce(x, y, n, stepsToOrigin);
-                // std::cout << "After Reduce: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
-
-                State parent = states[0];
-                uint64_t tempSteps = (*v.steps())[0];
-                for(int i = 0; i < v.getLength() - 1; i++) {
-                    parent = *parent.children[tempSteps & 1];
-                    tempSteps >>= 1;
+            if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y)) {
+                int forward_extendible = v.extendable(x, y);
+                if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                    std::cout << "forward_extendible=" << forward_extendible << std::endl;
                 }
-                if(!parent.children[tempSteps]) {
-                    // std::cout << "Added" << std::endl;
-                    states.emplace_back(v);
-                    states[untreated].children[1] = &states[states.size() - 1];
-                } else {
-                    states[untreated].children[1] = parent.children[tempSteps];
+                if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
+                    if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                        std::cout << "No Loop, Extendible" << std::endl;
+                    }
+                    v.reduce(x, y, n, stepsToOrigin);
+                    if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                        std::cout << "After Reduce: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
+                    }
+                    
+
+                    State parent = states[0];
+                    uint64_t tempSteps = (*v.steps())[0];
+                    for(int i = 0; i < v.getLength() - 1; i++) {
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Started Parent Loop" << std::endl;
+                        }
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Parent: " << toBinary((*parent.walk.steps())[0], parent.walk.getLength()) << std::endl; 
+                        //     std::cout << "Step: " << (int) (tempSteps & 1) << std::endl;
+                        //     std::cout << "H Pointer: " << parent.children[0] << std::endl;
+                        //     std::cout << "V Pointer: " << parent.children[1] << std::endl;
+                        //     State test = *parent.children[0];
+                        //     std::cout << "H Dereferenced" << std::endl;
+                        //     LongWalk walk = test.walk;
+                        //     std::cout << "H Walk" << std::endl;
+                        //     std::vector<uint64_t> steps = *walk.steps();
+                        //     std::cout << "H Steps Dereferenced" << std::endl;
+                        //     uint64_t step = steps[0];
+                        //     std::cout << "H Step 0" << std::endl;
+                        //     uint64_t length = walk.getLength();
+                        //     std::cout << "H Length" << std::endl;
+                        //     std::cout << "H Child: " << toBinary((*parent.children[0]->walk.steps())[0], parent.children[0]->walk.getLength()) << std::endl;
+                        //     std::cout << "V Child: " << toBinary((*parent.children[1]->walk.steps())[0], parent.children[1]->walk.getLength()) << std::endl;
+                        }
+
+                        if(!(parent.children[tempSteps & 1])) {
+                            std::cout << "V Parent Fail: " << toBinary((*states[untreated].walk.steps())[0], states[untreated].walk.getLength()) << std::endl;
+                        }
+
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Here1" << std::endl;
+                        }
+
+                        parent = *parent.children[tempSteps & 1];
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Here2" << std::endl;
+                        }
+                        tempSteps >>= 1;
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Here3" << std::endl;
+                        }
+                    }
+
+                    if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                        std::cout << "here 4" << std::endl;
+                    }
+                    if(!parent.children[tempSteps]) {
+                        if(states[untreated].walk.getLength() == 42 && (*states[untreated].walk.steps())[0] == 0b100011001100000000011111001100011110001100ULL) {
+                            std::cout << "Added" << std::endl;
+                        }
+                        states.emplace_back(v);
+                        states[untreated].children[1] = &states[states.size() - 1];
+                    } else {
+                        states[untreated].children[1] = parent.children[tempSteps];
+                    }
                 }
             }
         }
         ++untreated;
     }
+
+
 
     // Reset each state's number variables so they're no longer pattern and length, instead automaton iteration counts.
     for(auto & state : states) {
@@ -699,12 +855,16 @@ std::vector<State> makeAutomaton(int n) {
 }
 
 BigSum taxi(int automaton_size, int num_iterations) {
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     std::vector<State> automaton = makeAutomaton(automaton_size);
-
-    std::cout << "Automaton Generated." << std::endl;
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    double totalTime = (double)(end - begin).count() / 1000000000.0;
+    std::cout << automaton.size() << "-state automaton generated in " << totalTime << " seconds." << std::endl;
 
     // Sets "H" to current count 1.
     automaton[1].walk.var1 = 1;
+
+    begin = std::chrono::steady_clock::now();
 
     // Ends one step early, because on the final loop there's no need to move var2 to var1.
     for(int n = 2; n < num_iterations; ++n) {
@@ -723,29 +883,29 @@ BigSum taxi(int automaton_size, int num_iterations) {
             state.walk.var2 = 0;
         }
 
-        // if((n + 1) % 50 == 0) {
-            // std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << "." << std::endl;
-            // BigSum taxiWalks = 0;
-            // for(auto & state : automaton)
-            // {
-            //     if(state.var1)
-            //     {
-            //         if(state.children[0])
-            //         {
-            //             taxiWalks += state.var1;
-            //         }
-            //         if(state.children[1])
-            //         {
-            //             taxiWalks += state.var1;
-            //         }
-            //     }
-            // }
-            // std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
-        // }
+    //     int i = 50;
+    //     if((n + 1) % i == 0) {
+    //         BigSum taxiWalks = 0;
+    //         for(auto & state : automaton) {
+    //             if(state.walk.var1) {
+    //                 if(state.children[0]) {
+    //                     taxiWalks += state.walk.var1;
+    //                 }
+    //                 if(state.children[1]) {
+    //                     taxiWalks += state.walk.var1;
+    //                 }
+    //             }
+    //         }
+    //         end = std::chrono::steady_clock::now();
+    //         double totalTime = (double)(end - begin).count() / 1000000000.0;
+    //         std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << ". This group of " << i << " took " << totalTime << " seconds." << std::endl;
+    //         std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
+    //         begin = end;
+    //     }
     }
     // return 0;
 
-    std::cout << "Computing final sum..." << std::endl;
+    // std::cout << "Computing final sum..." << std::endl;
 
     BigSum taxiWalks = 0;
     for(auto & state : automaton) {
@@ -784,5 +944,32 @@ int main(int argc, char *argv[]) {
         int num_iterations = atoi(argv[2]);
         run(automaton_size, num_iterations);
     }
+    // std::vector<int> stepsToOrigin = getStepsToOrigin();
+    // LongWalk v(0b1100011001100000000011111001100011110001100ULL, 43, 0, 0);
+    // // LongWalk v(0b01110000011111001111000000011111100111000ULL, 42, 0, 0);
+    // std::cout << "V: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
+    // int x = 0, y = 0;
+    // v.getEndPoint(x, y);
+    // if(v.noLoop(x, y) && v.consistentNarrow(-4, 3, x, y)) {
+    //     int forward_extendible = v.extendable(x, y);
+    //     std::cout << "forward_extendible=" << forward_extendible << std::endl;
+    //     if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
+    //         std::cout << "No Loop, Extendible" << std::endl;
+    //         v.reduce(x, y, 55, stepsToOrigin);
+    //         std::cout << "After Reduce: " << toBinary((*v.steps())[0], v.getLength()) << std::endl;
+    //     }
+    // }
     return 0;
 }
+
+
+
+
+/*
+Walks right before the crash:
+111100001100000000011111001100011110001100
+000110001100000000011111001100011110001100
+001110001100000000011111001100011110001100
+000011001100000000011111001100011110001100
+100011001100000000011111001100011110001100
+*/
