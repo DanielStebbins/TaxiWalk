@@ -580,14 +580,14 @@ struct LongWalk {
 
 struct State {
     LongWalk walk; // The walk (steps, length, parity), then the sum counts.
-    State *children[2]{};
+    uint64_t childIndex[2]{};
 
     // Zero as the default child index should be ok because no paths reduce to nothing.
     State(uint64_t steps, uint64_t length, bool clockwiseClose, uint8_t narrowCount):
-        walk(steps, length, clockwiseClose, narrowCount), children{nullptr,nullptr} {}
+        walk(steps, length, clockwiseClose, narrowCount), childIndex{0,0} {}
 
     State(LongWalk walk):
-        walk(walk), children{nullptr,nullptr} {}
+        walk(walk), childIndex{0,0} {}
 };
 
 std::vector<int> getStepsToOrigin() {
@@ -630,14 +630,14 @@ std::vector<State> makeAutomaton(int n) {
                     State parent = states[0];
                     uint64_t tempSteps = (*h.steps())[0];
                     for(int i = 0; i < h.getLength() - 1; ++i) {
-                        parent = *parent.children[tempSteps & 1];
+                        parent = states[parent.childIndex[tempSteps & 1]];
                         tempSteps >>= 1;
                     }
-                    if(!parent.children[tempSteps]) {
+                    if(!parent.childIndex[tempSteps]) {
                         states.emplace_back(h);
-                        states[untreated].children[0] = &states[states.size() - 1];
+                        states[untreated].childIndex[0] = states.size() - 1;
                     } else {
-                        states[untreated].children[0] = parent.children[tempSteps];
+                        states[untreated].childIndex[0] = parent.childIndex[tempSteps];
                     }
                 }                
             }
@@ -656,14 +656,14 @@ std::vector<State> makeAutomaton(int n) {
                     State parent = states[0];
                     uint64_t tempSteps = (*v.steps())[0];
                     for(int i = 0; i < v.getLength() - 1; i++) {
-                        parent = *parent.children[tempSteps & 1];
+                        parent = states[parent.childIndex[tempSteps & 1]];
                         tempSteps >>= 1;
                     }
-                    if(!parent.children[tempSteps]) {
+                    if(!parent.childIndex[tempSteps]) {
                         states.emplace_back(v);
-                        states[untreated].children[1] = &states[states.size() - 1];
+                        states[untreated].childIndex[1] = states.size() - 1;
                     } else {
-                        states[untreated].children[1] = parent.children[tempSteps];
+                        states[untreated].childIndex[1] = parent.childIndex[tempSteps];
                     }
                 }
             }
@@ -697,11 +697,11 @@ BigSum taxi(int automaton_size, int num_iterations) {
     for(int n = 2; n < num_iterations; ++n) {
         for(auto & state : automaton) {
             if(state.walk.var1) {
-                if(state.children[0]) {
-                    (*state.children[0]).walk.var2 += state.walk.var1;
+                if(state.childIndex[0]) {
+                    automaton[state.childIndex[0]].walk.var2 += state.walk.var1;
                 }
-                if(state.children[1]) {
-                    (*state.children[1]).walk.var2 += state.walk.var1;
+                if(state.childIndex[1]) {
+                    automaton[state.childIndex[1]].walk.var2 += state.walk.var1;
                 }
             }
         }
@@ -710,15 +710,15 @@ BigSum taxi(int automaton_size, int num_iterations) {
             state.walk.var2 = 0;
         }
 
-        int i = 500;
+        int i = 100;
         if((n + 1) % i == 0) {
             BigSum taxiWalks = 0;
             for(auto & state : automaton) {
                 if(state.walk.var1) {
-                    if(state.children[0]) {
+                    if(state.childIndex[0]) {
                         taxiWalks += state.walk.var1;
                     }
-                    if(state.children[1]) {
+                    if(state.childIndex[1]) {
                         taxiWalks += state.walk.var1;
                     }
                 }
