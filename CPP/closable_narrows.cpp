@@ -30,10 +30,10 @@ std::string toBinary(uint64_t n, uint16_t len)
 struct State {
     uint64_t length;
     uint64_t steps;
-    uint8_t parity;
+    uint8_t clockwiseClose;
     
-    State(uint64_t steps, uint16_t length, uint8_t parity):
-        steps(steps), length(length), parity(parity) {}
+    State(uint64_t steps, uint16_t length, uint8_t clockwiseClose):
+        steps(steps), length(length), clockwiseClose(clockwiseClose) {}
 };
 
 
@@ -42,21 +42,21 @@ const uint64_t max_bit = 1ULL << 63;
 struct LongWalk {
     std::vector<uint64_t> steps;
     uint16_t length;
-    uint8_t parity;
+    uint8_t clockwiseClose;
 
     // No steps, they will get added either with = or + later.
     LongWalk() {
         length = 0;
-        parity = 0;
+        clockwiseClose = 0;
     }
 
-    LongWalk(uint64_t steps, uint16_t length, uint8_t parity):
-        steps(steps), length(length), parity(parity) {}
+    LongWalk(uint64_t steps, uint16_t length, uint8_t clockwiseClose):
+        steps(steps), length(length), clockwiseClose(clockwiseClose) {}
 
     void operator=(const LongWalk &other) {
 		steps = other.steps;
         length = other.length;
-        parity = other.parity;
+        clockwiseClose = other.clockwiseClose;
 	}
 
     LongWalk horizontalStep() {
@@ -258,10 +258,10 @@ int shortNarrowParity(LongWalk *toCheck, int x3, int y3, int x4, int y4) {
 bool oneStepConsistentNarrow(LongWalk *walk, int x3, int y3, int x4, int y4) {
     int newParity = shortNarrowParity(walk, x3, y3, x4, y4);
     if(newParity) {
-        if(walk->parity && walk->parity != newParity) {
+        if(walk->clockwiseClose && walk->clockwiseClose != newParity) {
             return false;
         } else {
-            walk->parity = newParity;
+            walk->clockwiseClose = newParity;
         }
     }
     return true;
@@ -271,7 +271,7 @@ bool oneStepConsistentNarrow(LongWalk *walk, int x3, int y3, int x4, int y4) {
 // Narrow structures must be created by unoccupied odd vertices. Therefore, they must be outside the final contour.
 // Odd v1 -> must be closed clockwise (more right turns). Even v1 -> must be closed counterclockwise (more left turns).
 bool narrowExcluded(LongWalk *walk) {
-    if(!walk->parity) {
+    if(!walk->clockwiseClose) {
         // Zero parity, no narrow.
         return true;
     }
@@ -314,7 +314,7 @@ bool narrowExcluded(LongWalk *walk) {
     leftTurns += (!prevStep && step && !diff) || ((prevStep == 1) && !step && diff);
 
     // Parity 1 -> v1 odd and must be clockwise, parity 2 -> v1 even must be counterclockwise.
-    return (walk->parity & 1) == (rightTurns > leftTurns);
+    return (walk->clockwiseClose & 1) == (rightTurns > leftTurns);
 }
 
 
@@ -343,8 +343,8 @@ int extendable(LongWalk *jail, int startX, int startY) {
     if(startX == 0 && startY == 0) {
         // Jail is never longer than 64 steps.
         jail->steps[0] = reverse(jail->steps[0], jail->length);
-        if(jail->parity && (jail->length & 1) == 0) {
-            jail->parity ^= 3;
+        if(jail->clockwiseClose && (jail->length & 1) == 0) {
+            jail->clockwiseClose ^= 3;
         }
         getEndPoint(jail->steps[0], jail->length, startX, startY);
     }
@@ -421,9 +421,6 @@ int extendable(LongWalk *jail, int startX, int startY) {
 }
 
 
-// TODO: connect up the closable narrow into the run function.
-
-
 
 uint64_t run(int n)
 {
@@ -448,12 +445,12 @@ uint64_t run(int n)
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
-            walk.parity = current.parity;
+            walk.clockwiseClose = current.clockwiseClose;
             if(noLoop(steps, length-12, _x, _y, x, y) && oneStepConsistentNarrow(&walk, prevX, prevY, x, y)) {
                 int forward_extendible = extendable(&walk, x, y);
                 if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
-                        walks.emplace_back(steps, length, walk.parity);
+                        walks.emplace_back(steps, length, walk.clockwiseClose);
                     } else {
                         count++;
                     }
@@ -470,12 +467,12 @@ uint64_t run(int n)
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
-            walk.parity = current.parity;
+            walk.clockwiseClose = current.clockwiseClose;
             if(noLoop(steps, length-12, _x, _y, x, y) && oneStepConsistentNarrow(&walk, prevX, prevY, x, y)) {
                 int forward_extendible = extendable(&walk, x, y);
                 if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
-                        walks.emplace_back(steps, length, walk.parity);
+                        walks.emplace_back(steps, length, walk.clockwiseClose);
                     } else {
                         count++;
                     }

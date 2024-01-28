@@ -748,18 +748,75 @@ BigSum taxi(int automaton_size, int num_iterations) {
     // return taxiWalks;
 }
 
+
+uint64_t bruteForce(int N)
+{
+    std::vector<LongWalk> walks;
+    // H start.
+    walks.emplace_back(0, 1, 0, 0);
+
+    uint64_t count = 0;
+
+    while(!walks.empty()) {
+        LongWalk current = walks.back();
+        walks.pop_back();
+        int prevX = 0, prevY = 0;
+        current.getEndPoint(prevX, prevY);
+
+        // Horizontal Step.
+        if(current.approach() != 2 || current.getLength() < 2) {
+            LongWalk h = current.horizontalStep();
+            int x = 0, y = 0;
+            h.getEndPoint(x, y);
+            if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y)) {
+                int forward_extendible = h.extendable(x, y);
+                if(forward_extendible == 2 || (forward_extendible && h.extendable(0, 0))) {
+                    if(h.getLength() != N) {
+                        walks.push_back(h);
+                    } else {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        // Vertical Step.
+        if(current.approach() != 1 || current.getLength() < 2) {
+            LongWalk v = current.verticalStep();
+            int x = 0, y = 0;
+            v.getEndPoint(x, y);
+            if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y)) {
+                int forward_extendible = v.extendable(x, y);
+                if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
+                    if(v.getLength() != N) {
+                        walks.push_back(v);
+                    } else {
+                        count++;
+                    }
+                }
+            }
+        }
+    }
+
+    return count << 1;
+}
+
 void run(int automaton_size, int num_iterations) {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-
-    BigSum t = taxi(automaton_size, num_iterations);
-
-    // << '0' << is to "multiply by 2". Only works for binary outputs.
-    std::cout << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
+    if(automaton_size > 0) {
+        BigSum t = taxi(automaton_size, num_iterations);
+        // << '0' << is to "multiply by 2". Only works for binary outputs.
+        std::cout << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
+    } else {
+        std::cout << num_iterations << ": " << bruteForce(num_iterations) << std::endl;
+    }
 
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
     std::cout << "Total Time: " << totalTime << std::endl;
 }
+
+
 
 int main(int argc, char *argv[]) {
     // Automaton size must not be more than 63 because the automaton generator still uses only 64 bits of each state's variables.
