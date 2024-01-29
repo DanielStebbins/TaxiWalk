@@ -91,11 +91,11 @@ int narrow64(uint64_t steps, uint16_t length, int &x1, int &y1, int &x2, int &y2
         }
         steps >>= 1;
 
-        // Vertical narrow (x coords off by one, y coords equal).
-        if(abs(x4 - x1) == 1 && abs(y4 - y1) == 0 && abs(x3 - x2) == 1 && abs(y3 - y2) == 0) {
+        // Vertical narrow (x coords off by one, y coords equal, difference between x coords same direction (last check is implicit in other 2)).
+        if(abs(x4 - x1) == 1 && y4 == y1 && abs(x3 - x2) == 1 && y3 == y2 && x4 - x1 == x3 - x2) {
             // The parity of the number of steps taken gives the parity of the point (x1, y1). Odd goes clockwise, even counterclockwise.
             return i & 1;
-        } else if(abs(x4 - x1) == 0 && abs(y4 - y1) == 1 && abs(x3 - x2) == 0 && abs(y3 - y2) == 1) {
+        } else if(x4 == x1 && abs(y4 - y1) == 1 && x3 == x2 && abs(y3 - y2) == 1 && y4 - y1 == y3 - y2) {
             // Odd goes counterclockwise, even clockwise.
             return !(i & 1);
         }
@@ -113,11 +113,6 @@ struct BigSum {
     
     BigSum(uint64_t value = 0) {
         segments.push_back(value);
-        if(segments[0] & max_bit) {
-            segments[0] &= ~max_bit;
-            segments.push_back(1);
-            std::cout << "BigSum created with carry." << std::endl;
-        }
     }
 
     void operator=(const BigSum &other) {
@@ -127,11 +122,6 @@ struct BigSum {
 	void operator=(uint64_t value) {
 		segments.clear();
 		segments.push_back(value);
-        if(segments[0] & max_bit) {
-            segments[0] &= ~max_bit;
-            segments.push_back(1);
-            std::cout << "BigSum assigned with carry." << std::endl;
-        }
 	}
 
     BigSum operator+(const BigSum &other) const {
@@ -291,8 +281,6 @@ struct LongWalk {
         }
         int length = 0;
         int index = 0;
-        int xStep = 1;
-        int yStep = 1;
         int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
         while(length + 64 < getLength() - 10) {
             int parity = narrow64((*steps())[index], 64, x1, y1, x2, y2, x3, y3, x4, y4);
@@ -356,7 +344,6 @@ struct LongWalk {
             tempSteps >>= 1;
 
             if(abs(x4 - x1) + abs(y4 - y1) == 1 && abs(x3 - x2) + abs(y3 - y2) == 1) {
-                // The parity of the number of steps taken gives the parity of the point (x1, y1).
                 return true;
             }
         }
@@ -469,12 +456,13 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 h.getEndPoint(x, y);
-                bool consistent = h.consistentNarrow(prevX, prevY, x, y);
-                if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && consistent && h.narrowExcluded()) {
+                // bool consistent = h.consistentNarrow(prevX, prevY, x, y);
+                // bool goodNarrow = h.goodNarrowExtension();
+                if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension() && h.narrowExcluded()) {
                     *this = jailBackup;
                     return 2;
                 }
-                else if(h.noLoop(x, y) && consistent) {
+                else if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension()) {
                     if(canEscape(ha, x, y, minX, maxX, minY, maxY)) {
                         *this = jailBackup;
                         return 1;
@@ -491,12 +479,13 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 v.getEndPoint(x, y);
-                bool consistent = v.consistentNarrow(prevX, prevY, x, y);
-                if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && consistent && v.narrowExcluded()) {
+                // bool consistent = v.consistentNarrow(prevX, prevY, x, y);
+                // bool goodNarrow = v.goodNarrowExtension();
+                if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension() && v.narrowExcluded()) {
                     *this = jailBackup;
                     return 2;
                 }
-                else if(v.noLoop(x, y) && consistent) {
+                else if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension()) {
                     if(canEscape(va, x, y, minX, maxX, minY, maxY)) {
                         *this = jailBackup;
                         return 1;
@@ -552,6 +541,111 @@ struct LongWalk {
         var1.segments[0] = tempSteps;
         setLength(length);
         setClockwiseClose(clockwise);
+    }
+
+    void removeStep() {
+        if(getLength() > 0) {
+            int lastLen = lastSegmentLength();
+            if(lastLen == 1) {
+                steps()->pop_back();
+            } else {
+                steps()->back() = steps()->back() & ~(1ULL << (lastLen - 1));
+            }
+            setLength(getLength() - 1);
+        }
+    }
+
+    // Enforces that a narrow should have two of its 2-step paths out be straight and the other two be turns.
+    // Only checks 2 steps back, older ones would have already been checked.
+    bool goodNarrowExtension() {
+        if(!getNarrowCount() || getLength() < 10) {
+            // No narrow.
+            return true;
+        }
+        int x3 = 0, y3 = 0, x4 = 0, y4 = 0;
+        // Back three steps.
+        LongWalk backup = *this;
+        backup.removeStep();
+        backup.removeStep();
+        backup.getEndPoint(x4, y4);
+        backup.removeStep();
+        backup.getEndPoint(x3, y3);
+
+
+        int parity = -1;
+        int length = 0;
+        int index = 0;
+        int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        while(parity == - 1 && length + 64 < getLength() - 10) {
+            int parity = narrow64((*steps())[index], 64, x1, y1, x2, y2, x3, y3, x4, y4);
+            length += 64;
+            index++;
+        }
+        if(parity == -1) {
+            // It's not possible to get within 1 step of yourself in 10 steps. The last 2 steps must be omited or they detect themselves.
+            int m = (getLength() - 10) & 63;
+            parity = narrow64((*steps())[index], m, x1, y1, x2, y2, x3, y3, x4, y4);
+        }
+
+        // Narrow.
+        if(parity != -1) {
+            // Both sides (x1y1, x2y2) and (x3y3, x4y4) must make "L" shapes. HHVVV and VVVHH on either side or VVHHH and HHHVV.
+            // Walk through and check the conditions when encountering the narrow points.
+            int xStep = 1, yStep = 1;
+            int i = 0, x = 0, y = 0;
+            int length = 0;
+            int target2 = -1;
+            uint8_t lastFive = 0;
+            uint8_t secondL = 0;
+            uint64_t tempSteps = (*steps())[0];
+            while(i < steps()->size() - 1 || (i < steps()->size() && length < lastSegmentLength())) {
+                lastFive = (lastFive >> 1) | ((tempSteps & 1) << 4);
+                if(tempSteps & 1) {
+                    y += yStep;
+                    xStep = -xStep;
+                } else {
+                    x += xStep;
+                    yStep = -yStep;
+                }
+                tempSteps >>= 1;
+
+                // When x2y2 is encountered, walk 2 more steps.
+                if(x == x2 && y == y2) {
+                    if(i || length >= 2) {
+                        target2 = (length + 2) & 63;
+                    } else {
+                        // For now ignores narrows in the first step (would need to check the closure's last steps).
+                        return true;
+                    }
+                }
+                // Then check the last five steps. Make sure they are one of the valid "L" shapes.
+                if(length == target2) {
+                    if(lastFive != 0b00011 && lastFive != 0b11000 && lastFive != 0b11100 && lastFive != 0b00111) {
+                        // First side of the narrow doesn't make an "L" shape.
+                        // std::cout << "Fail on first L: " << toBinary((*steps())[i], getLength()) << " " << (int) clockwiseClose() << " " << (int) getNarrowCount() << std::endl;
+                        return false;
+                    }
+                    secondL = lastFive;
+                    target2 = -1;
+                }
+                
+                length++;
+                tempSteps >> 1;
+                if(!(length & 63)) {
+                    i++;
+                    uint64_t tempSteps = (*steps())[i];
+                    length = 0;
+                }
+            }
+            // Both "L"'s have to match for it to be good.
+            if(lastFive != secondL) {
+                // std::cout << "Fail on second L: " << toBinary(steps()->back(), lastSegmentLength()) << " " << (int) clockwiseClose() << " " << (int) getNarrowCount() << std::endl;
+            }
+            return lastFive == secondL;
+        }
+
+        // No narrow.
+        return true;
     }
 
     std::string to_string() const {
@@ -622,7 +716,7 @@ std::vector<State> makeAutomaton(int n) {
             LongWalk h = states[untreated].walk.horizontalStep();
             int x = 0, y = 0;
             h.getEndPoint(x, y);
-            if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y)) {
+            if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension()) {
                 int forward_extendible = h.extendable(x, y);
                 if(forward_extendible == 2 || (forward_extendible && h.extendable(0, 0))) {
                     h.reduce(x, y, n, stepsToOrigin);
@@ -648,7 +742,7 @@ std::vector<State> makeAutomaton(int n) {
             LongWalk v = states[untreated].walk.verticalStep();
             int x = 0, y = 0;
             v.getEndPoint(x, y);
-            if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y)) {
+            if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension()) {
                 int forward_extendible = v.extendable(x, y);
                 if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
                     v.reduce(x, y, n, stepsToOrigin);
@@ -768,7 +862,7 @@ uint64_t bruteForce(int N)
             LongWalk h = current.horizontalStep();
             int x = 0, y = 0;
             h.getEndPoint(x, y);
-            if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y)) {
+            if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension()) {
                 int forward_extendible = h.extendable(x, y);
                 if(forward_extendible == 2 || (forward_extendible && h.extendable(0, 0))) {
                     if(h.getLength() != N) {
@@ -785,7 +879,7 @@ uint64_t bruteForce(int N)
             LongWalk v = current.verticalStep();
             int x = 0, y = 0;
             v.getEndPoint(x, y);
-            if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y)) {
+            if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension()) {
                 int forward_extendible = v.extendable(x, y);
                 if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
                     if(v.getLength() != N) {
@@ -829,4 +923,10 @@ int main(int argc, char *argv[]) {
         run(automaton_size, num_iterations);
     }
     return 0;
+    // LongWalk prev(0b10000111000110011111, 20, 1, 1);
+    // int prevX = 0, prevY = 0, x = 0, y = 0;
+    // prev.getEndPoint(prevX, prevY);
+    // LongWalk test(0b110000111000110011111, 21, 1, 2);
+    // test.getEndPoint(x, y);
+    // std::cout << test.consistentNarrow(prevX, prevY, x, y) << std::endl;
 }
