@@ -8,7 +8,7 @@
 #include <deque>
 #include <algorithm>
 
-std::string toBinary(uint64_t steps, uint16_t length) {
+std::string toBinary64(uint64_t steps, uint16_t length) {
     if(length == 0) {
         return "Origin";
     }
@@ -28,7 +28,7 @@ void getEndPoint64(uint64_t steps, uint16_t length, int &x, int &y) {
     // Step direction impacted by the starting point (Manhattan Lattice).
     int xStep = 1 - ((y & 1) << 1);
     int yStep = 1 - ((x & 1) << 1);
-    for(int i = 0; i < length; ++i) {
+    for(int i = 0; i < length; i++) {
         if(steps & 1) {
             y += yStep;
             xStep = -xStep;
@@ -126,13 +126,16 @@ struct BigSum {
 
     BigSum operator+(const BigSum &other) const {
         BigSum result = other;
-        for(int i = 0, carry = 0; i < std::max(segments.size(), other.segments.size()) || carry; ++i) {
+        bool carry = false;
+        int i = 0;
+        while(i < std::max(segments.size(), other.segments.size()) || carry) {
             if(i == result.segments.size()) {
                 result.segments.push_back(0);
             }
             uint64_t previous_value = result.segments[i];
             result.segments[i] += carry + (i < segments.size() ? segments[i] : 0);
             carry = result.segments[i] < previous_value;
+            i++;
         }
         return result;
 	}
@@ -144,29 +147,6 @@ struct BigSum {
     operator bool() {
         return segments.size() > 1 || (segments.size() == 1 && segments[0] != 0ULL);
     }
-
-    std::string to_string() const {
-        if(segments.empty()) {
-            return "Empty!";
-        } else {
-            std::string out = "";
-            for(int i = segments.size() - 1; i >= 0; --i) {
-			    out += toBinary(segments[i], 64);
-            }
-
-            // Avoid leading 0s.
-            int i = 0;
-            while(i < out.length() && out[i] == '0') {
-                ++i;
-            }
-            return out.substr(i);
-        }
-    }
-
-    friend std::ostream& operator<<(std::ostream &stream, const BigSum &bigsum) {
-        stream << bigsum.to_string();
-        return stream;
-	}
 };
 
 
@@ -189,6 +169,20 @@ struct LongWalk {
 		var1 = other.var1;
         var2 = other.var2;
 	}
+
+    // Each segment is right to left, but the segments stack left to right (last steps are in the leftmost bits of the rightmost u64).
+    const std::string toBinary() {
+        if(var1.segments.empty()) {
+            return "Origin";
+        } else {
+            std::string binary;
+            binary.append(toBinary64(steps()->back(), lastSegmentLength()));
+            for(int i = steps()->size() - 2; i >= 0; i--) {
+                binary.append(toBinary64((*steps())[i], 64));
+            }
+            return binary;
+        }
+    }
 
     // Bitpacking convenience functions for var2.
     inline std::vector<uint64_t> *steps() { return &var1.segments; }
@@ -295,7 +289,7 @@ struct LongWalk {
         return narrow64((*steps())[index], m, x1, y1, x2, y2, x3, y3, x4, y4);
     }
 
-    // For when a single step is added to the end of a walk whose parity is known.
+    // For when a single step is added to the end of a walk whose clockwiseness is known.
     bool consistentNarrow(int x3, int y3, int x4, int y4) {
         int newClockwiseness = narrowClockwisenessEnd(x3, y3, x4, y4);
         if(newClockwiseness != -1) {
@@ -456,10 +450,11 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 h.getEndPoint(x, y);
-                // bool consistent = h.consistentNarrow(prevX, prevY, x, y);
-                // bool goodNarrow = h.goodNarrowExtension();
                 if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension() && h.narrowExcluded()) {
                     *this = jailBackup;
+                    if(h.getLength() > 60) {
+                        // std::cout << toBinary() << " closed by "  << h.toBinary() << std::endl;
+                    }
                     return 2;
                 }
                 else if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension()) {
@@ -479,10 +474,11 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 v.getEndPoint(x, y);
-                // bool consistent = v.consistentNarrow(prevX, prevY, x, y);
-                // bool goodNarrow = v.goodNarrowExtension();
                 if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension() && v.narrowExcluded()) {
                     *this = jailBackup;
+                    if(v.getLength() > 60) {
+                        // std::cout << toBinary() << " closed by " << v.toBinary() << std::endl;
+                    }
                     return 2;
                 }
                 else if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension()) {
@@ -647,29 +643,6 @@ struct LongWalk {
         // No narrow.
         return true;
     }
-
-    std::string to_string() const {
-        if(var1.segments.empty()) {
-            return "Empty!";
-        } else {
-            std::string out = "";
-            for(int i = var1.segments.size() - 1; i >= 0; --i) {
-			    out += toBinary(var1.segments[i], 64);
-            }
-
-            // Avoid leading 0s.
-            int i = 0;
-            while(i < out.length() && out[i] == '0') {
-                ++i;
-            }
-            return out.substr(i);
-        }
-    }
-
-    friend std::ostream& operator<<(std::ostream &stream, const LongWalk &longwalk) {
-        stream << longwalk.to_string();
-        return stream;
-	}
 };
 
 struct State {
@@ -717,13 +690,13 @@ std::vector<State> makeAutomaton(int n) {
             int x = 0, y = 0;
             h.getEndPoint(x, y);
             if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension()) {
-                int forward_extendible = h.extendable(x, y);
-                if(forward_extendible == 2 || (forward_extendible && h.extendable(0, 0))) {
+                int forward_extendable = h.extendable(x, y);
+                if(forward_extendable == 2 || (forward_extendable && h.extendable(0, 0))) {
                     h.reduce(x, y, n, stepsToOrigin);
                     
                     State parent = states[0];
                     uint64_t tempSteps = (*h.steps())[0];
-                    for(int i = 0; i < h.getLength() - 1; ++i) {
+                    for(int i = 0; i < h.getLength() - 1; i++) {
                         parent = states[parent.childIndex[tempSteps & 1]];
                         tempSteps >>= 1;
                     }
@@ -743,8 +716,8 @@ std::vector<State> makeAutomaton(int n) {
             int x = 0, y = 0;
             v.getEndPoint(x, y);
             if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension()) {
-                int forward_extendible = v.extendable(x, y);
-                if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
+                int forward_extendable = v.extendable(x, y);
+                if(forward_extendable == 2 || (forward_extendable && v.extendable(0, 0))) {
                     v.reduce(x, y, n, stepsToOrigin);
 
                     State parent = states[0];
@@ -863,8 +836,8 @@ uint64_t bruteForce(int N)
             int x = 0, y = 0;
             h.getEndPoint(x, y);
             if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension()) {
-                int forward_extendible = h.extendable(x, y);
-                if(forward_extendible == 2 || (forward_extendible && h.extendable(0, 0))) {
+                int forward_extendable = h.extendable(x, y);
+                if(forward_extendable == 2 || (forward_extendable && h.extendable(0, 0))) {
                     if(h.getLength() != N) {
                         walks.push_back(h);
                     } else {
@@ -880,8 +853,8 @@ uint64_t bruteForce(int N)
             int x = 0, y = 0;
             v.getEndPoint(x, y);
             if(v.noLoop(x, y) && v.consistentNarrow(prevX, prevY, x, y) && v.goodNarrowExtension()) {
-                int forward_extendible = v.extendable(x, y);
-                if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
+                int forward_extendable = v.extendable(x, y);
+                if(forward_extendable == 2 || (forward_extendable && v.extendable(0, 0))) {
                     if(v.getLength() != N) {
                         walks.push_back(v);
                     } else {
@@ -923,10 +896,19 @@ int main(int argc, char *argv[]) {
         run(automaton_size, num_iterations);
     }
     return 0;
-    // LongWalk prev(0b10000111000110011111, 20, 1, 1);
-    // int prevX = 0, prevY = 0, x = 0, y = 0;
+
+
+
+    // LongWalk prev(0b111001111000111111111110011000000000111111111110, 48, 0, 0);
+    // int prevX = 0, prevY = 0;
     // prev.getEndPoint(prevX, prevY);
-    // LongWalk test(0b110000111000110011111, 21, 1, 2);
-    // test.getEndPoint(x, y);
-    // std::cout << test.consistentNarrow(prevX, prevY, x, y) << std::endl;
+    // LongWalk h = prev.horizontalStep();
+    // int x = 0, y = 0;
+    // h.getEndPoint(x, y);
+    // if(h.noLoop(x, y) && h.consistentNarrow(prevX, prevY, x, y) && h.goodNarrowExtension()) {
+    //     int forward_extendable = h.extendable(x, y);
+    //     if(forward_extendable == 2 || (forward_extendable && h.extendable(0, 0))) {
+    //         std::cout << "Done!" << std::endl;
+    //     }                
+    // }
 }
