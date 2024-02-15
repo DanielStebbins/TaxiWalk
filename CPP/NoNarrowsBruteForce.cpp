@@ -359,12 +359,14 @@ int extendable(LongWalk *jail, int startX, int startY) {
 
 
 
-uint64_t run(int n)
+void run(int n)
 {
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     std::vector<State> walks;
     // H start.
     walks.emplace_back(0, 1, 0);
-
+    uint64_t counts[100] = {0};
+    counts[1] = 1;
     uint64_t count = 0;
 
     while(!walks.empty()) {
@@ -372,13 +374,11 @@ uint64_t run(int n)
         walks.pop_back();
         int prevX = 0, prevY = 0;
         getEndPoint(current.steps, current.length, prevX, prevY);
-        // std::cout << "Current: " << toBinary(current.steps, current.length) << std::endl;
 
         // Horizontal Step.
         if(approach(current.steps, current.length) != 2 || current.length < 2) {
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps;
-            // std::cout << "H: " << toBinary(steps, length) << std::endl;
             int x = 0, y = 0, _x = 0, _y = 0;
             getEndPoint(steps, length, x, y);
             LongWalk walk;
@@ -386,17 +386,13 @@ uint64_t run(int n)
             walk.length = length;
             walk.clockwiseClose = current.clockwiseClose;
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
-            // if(!noNarrowFlag) {
-            //     std::cout << toBinary(steps, length) << std::endl;
-            // }
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
                 int forward_extendible = extendable(&walk, x, y);
                 if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
                         walks.emplace_back(steps, length, walk.clockwiseClose);
-                    } else {
-                        count++;
                     }
+                    counts[length]++;
                 }
             }
         }
@@ -405,7 +401,7 @@ uint64_t run(int n)
        if(approach(current.steps, current.length) != 1 || current.length < 2) {
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps | (1ULL << current.length);
-            // std::cout << "V: " << toBinary(steps, length) << std::endl;
+
             int x = 0, y = 0, _x = 0, _y = 0;
             getEndPoint(steps, length, x, y);
             LongWalk walk;
@@ -413,34 +409,24 @@ uint64_t run(int n)
             walk.length = length;
             walk.clockwiseClose = current.clockwiseClose;
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
-            // if(!noNarrowFlag) {
-            //     std::cout << toBinary(steps, length) << std::endl;
-            // }
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
                 int forward_extendible = extendable(&walk, x, y);
                 if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
                         walks.emplace_back(steps, length, walk.clockwiseClose);
-                    } else {
-                        count++;
                     }
+                    counts[length]++;
                 }
             }
         }
     }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-    return count << 1;
-}
-
-void upTo(int start, int stop) {
-    for(int n = start; n <= stop; n += 1)
-    {
-        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-        std::cout << "\nn=" << n << ": " << run(n) << std::endl;
-        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-        double totalTime = (double)(end - begin).count() / 1000000000.0;
-        std::cout << "Total Time: " << totalTime << std::endl;
+    for(int i = 1; i <= n; i++) {
+        std::cout << "N=" << i << ": " << (counts[i] << 1) << std::endl;
     }
+    double totalTime = (double)(end - begin).count() / 1000000000.0;
+    std::cout << "Total Time: " << totalTime << std::endl;
 }
 
 int main(int argc, char *argv[])
@@ -448,13 +434,7 @@ int main(int argc, char *argv[])
     if(argc == 2)
     {
         int N = atoi(argv[1]);
-        upTo(N, N);
-    }
-    else if(argc == 3)
-    {
-        int start = atoi(argv[1]);
-        int end = atoi(argv[2]);
-        upTo(start, end);
+        run(N);
     }
     return 0;
 }
