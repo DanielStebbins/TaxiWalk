@@ -15,3 +15,12 @@ taxi = binary_to_decimal(binary_string)
 print(f"I={i}, taxi={taxi}")
 print(f"mu > {mu_taxi(i, taxi)}")
 print(f"lambda > {constant(i, taxi)}")
+
+
+with open("brute.txt") as brute:
+    b = brute.readlines()
+    with open("bigSum.txt") as bigSum:
+        bs = set(bigSum.readlines())
+        for walk in b:
+            if walk not in bs:
+                print(walk)

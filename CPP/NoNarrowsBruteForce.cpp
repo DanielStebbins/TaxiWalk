@@ -7,21 +7,17 @@
 #include <chrono>
 #include <deque>
 
-std::string toBinary(uint64_t n, uint16_t len)
-{
-    if(len == 0) {
+std::string toBinary64(uint64_t steps, uint16_t length) {
+    if(length == 0) {
         return "Origin";
     }
     std::string binary;
-    for(uint16_t i = 0; i < len; i++)
+    for(uint16_t i = 0; i < length; i++)
     {
-        if((n >> i) & 1)
-        {
-            binary += "V";
-        }
-        else
-        {
-            binary += "H";
+        if((steps >> (length - 1 - i)) & 1) {
+            binary += "1";
+        } else {
+            binary += "0";
         }
     }
     return binary;
@@ -30,10 +26,9 @@ std::string toBinary(uint64_t n, uint16_t len)
 struct State {
     uint64_t length;
     uint64_t steps;
-    uint8_t clockwiseClose;
     
-    State(uint64_t steps, uint16_t length, uint8_t clockwiseClose):
-        steps(steps), length(length), clockwiseClose(clockwiseClose) {}
+    State(uint64_t steps, uint16_t length):
+        steps(steps), length(length) {}
 };
 
 
@@ -42,26 +37,25 @@ const uint64_t max_bit = 1ULL << 63;
 struct LongWalk {
     std::vector<uint64_t> steps;
     uint16_t length;
-    uint8_t clockwiseClose;
 
     // No steps, they will get added either with = or + later.
     LongWalk() {
         length = 0;
-        clockwiseClose = 0;
     }
 
-    LongWalk(uint64_t steps, uint16_t length, uint8_t clockwiseClose):
-        steps(steps), length(length), clockwiseClose(clockwiseClose) {}
+    LongWalk(uint64_t s, uint16_t length):
+        length(length) {
+            steps.push_back(s);
+        }
 
     void operator=(const LongWalk &other) {
 		steps = other.steps;
         length = other.length;
-        clockwiseClose = other.clockwiseClose;
 	}
 
     LongWalk horizontalStep() {
         LongWalk result = *this;
-        if(!(result.length & 63)) {
+        if(lastSegmentLength() == 64) {
             result.steps.push_back(0);
         }
         result.length++;
@@ -70,7 +64,7 @@ struct LongWalk {
 
     LongWalk verticalStep() {
         LongWalk result = *this;
-        int m = result.length & 63;
+        int m = lastSegmentLength();
         if(m) {
             result.steps.back() |= 1ULL << m;
         } else {
@@ -80,29 +74,23 @@ struct LongWalk {
         return result;
     }
 
-    std::string to_string() const {
-        if(steps.empty()) {
-            return "Empty!";
-        } else {
-            std::string out = "";
-            for(int i = steps.size() - 1; i >= 0; --i) {
-			    out += toBinary(steps[i], 64);
-            }
-
-            // Avoid leading 0s.
-            int i = 0;
-            while(i < out.length() && out[i] == '0') {
-                ++i;
-            }
-            return out.substr(i);
-            return out;
-        }
+    inline uint64_t lastSegmentLength() { 
+        return length - (64 * (steps.size() - 1));
     }
 
-    friend std::ostream& operator<<(std::ostream &stream, const LongWalk &longwalk) {
-        stream << longwalk.to_string();
-        return stream;
-	}
+    // Each segment is right to left, but the segments stack left to right (last steps are in the leftmost bits of the rightmost u64).
+    const std::string toBinary() {
+        if(steps.empty()) {
+            return "Origin";
+        } else {
+            std::string binary;
+            binary.append(toBinary64(steps.back(), length - (64 * (steps.size() - 1))));
+            for(int i = steps.size() - 2; i >= 0; i--) {
+                binary.append(toBinary64(steps[i], 64));
+            }
+            return binary;
+        }
+    }
 };
 
 void getEndPoint(uint64_t steps, uint16_t length, int &x, int &y) {
@@ -129,7 +117,7 @@ void getLongEndPoint(LongWalk *walk, int &x, int &y) {
         for(int i = 0; i < walk->steps.size() - 1; i++) {
             getEndPoint(walk->steps[i], 64, x, y);
         }
-        getEndPoint(walk->steps.back(), walk->length & 63, x, y);
+        getEndPoint(walk->steps.back(), walk->lastSegmentLength(), x, y);
     }
 }
 
@@ -162,7 +150,7 @@ bool longNoLoop(LongWalk *walk, int x, int y, int endX, int endY) {
         flag = noLoop(walk->steps[i], 64, x, y, endX, endY);
         ++i;
     }
-    return flag && noLoop(walk->steps.back(), (walk->length & 63) - 12, x, y, endX, endY);
+    return flag && noLoop(walk->steps.back(), walk->lastSegmentLength() - 12, x, y, endX, endY);
 }
 
 // HH -> 00 (0)
@@ -174,7 +162,7 @@ inline int approach(uint64_t steps, uint16_t length) {
 }
 
 inline int longApproach(LongWalk *walk) {
-    return approach(walk->steps.back(), walk->length & 63);
+    return approach(walk->steps.back(), walk->lastSegmentLength());
 }
 
 void getBoundingBox(uint64_t steps, uint16_t length, int &minX, int &maxX, int &minY, int &maxY) {
@@ -201,7 +189,8 @@ void getBoundingBox(uint64_t steps, uint16_t length, int &minX, int &maxX, int &
 
 
 // "On the minX boundary, horizontal step goes left (-x), and taking that horizontal step doesn't break the 2-turn rule (should never be less than length 2)".
-inline bool canEscape(int approach, int x, int y, int minX, int maxX, int minY, int maxY) {   
+inline bool canEscape(int approach, int x, int y, int minX, int maxX, int minY, int maxY) {
+    // std::cout << approach << " " << x << " " << y << " " << minX << " " << maxX << " " << minY << " " << maxY << std::endl;
     return (x == minX && (y & 1) || x == maxX && !(y & 1)) && (approach != 2)
             || (y == minY && (x & 1) || y == maxY && !(x & 1)) && (approach != 1);
 }
@@ -267,8 +256,8 @@ uint64_t reverse(uint64_t steps, uint16_t length) {
 // Can some valid walk go from the given point (one of the endpoints of the walk we're testing)
 // to the bounding box of the walk (minX to maxX, minY to maxY)? Or do all walks originating at
 // the given point die out?
-// Returns 0 if not extendable (boxed), 1 if extendable (escapes bounding box), 2 if encountered the goal point.
-int extendable(LongWalk *jail, int startX, int startY) {
+// Returns 0 if not extendible (boxed), 1 if extendible (escapes bounding box), 2 if encountered the goal point.
+int extendible(LongWalk *jail, int startX, int startY) {
     if(jail->length < 10) {
         return 2;
     }
@@ -278,11 +267,10 @@ int extendable(LongWalk *jail, int startX, int startY) {
     if(startX == 0 && startY == 0) {
         // Jail is never longer than 64 steps.
         jail->steps[0] = reverse(jail->steps[0], jail->length);
-        if(jail->clockwiseClose && (jail->length & 1) == 0) {
-            jail->clockwiseClose ^= 3;
-        }
         getEndPoint(jail->steps[0], jail->length, startX, startY);
     }
+
+
 
     int minX = 0, maxX = 0, minY = 0, maxY = 0;
     getBoundingBox(jail->steps[0], jail->length, minX, maxX, minY, maxY);
@@ -308,6 +296,7 @@ int extendable(LongWalk *jail, int startX, int startY) {
         // Horizontal Step.
         if(a != 2) {
             LongWalk h = current->horizontalStep();
+            // std::cout << h.toBinary() << std::endl;
             int ha = longApproach(&h);
             int x = 0;
             int y = 0;
@@ -331,6 +320,7 @@ int extendable(LongWalk *jail, int startX, int startY) {
         // Vertical Step.
         if(a != 1) {
             LongWalk v = current->verticalStep();
+            // std::cout << v.toBinary() << std::endl;
             int va = longApproach(&v);
             int x = 0;
             int y = 0;
@@ -359,15 +349,18 @@ int extendable(LongWalk *jail, int startX, int startY) {
 
 
 
-void run(int n)
-{
+void run(int n) {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     std::vector<State> walks;
     // H start.
-    walks.emplace_back(0, 1, 0);
+    walks.emplace_back(0, 1);
     uint64_t counts[100] = {0};
     counts[1] = 1;
     uint64_t count = 0;
+    // uint64_t forward2Count = 0;
+
+    // std::ofstream f;
+    // f.open("brute.txt");
 
     while(!walks.empty()) {
         State current = walks.back();
@@ -384,15 +377,20 @@ void run(int n)
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
-            walk.clockwiseClose = current.clockwiseClose;
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
-                int forward_extendible = extendable(&walk, x, y);
-                if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
+                int forward_extendible = extendible(&walk, x, y);
+                // if(forward_extendible == 2) {
+                //     forward2Count++;
+                // }
+                if(forward_extendible == 2 || (forward_extendible && extendible(&walk, 0, 0))) {
                     if(length != n) {
-                        walks.emplace_back(steps, length, walk.clockwiseClose);
+                        walks.emplace_back(steps, length);
                     }
                     counts[length]++;
+                    // if(length == n) {
+                    //     f << toBinary64(steps, length) << std::endl;
+                    // }
                 }
             }
         }
@@ -407,19 +405,25 @@ void run(int n)
             LongWalk walk;
             walk.steps.push_back(steps);
             walk.length = length;
-            walk.clockwiseClose = current.clockwiseClose;
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
-                int forward_extendible = extendable(&walk, x, y);
-                if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
+                int forward_extendible = extendible(&walk, x, y);
+                // if(forward_extendible == 2) {
+                //     forward2Count++;
+                // }
+                if(forward_extendible == 2 || (forward_extendible && extendible(&walk, 0, 0))) {
                     if(length != n) {
-                        walks.emplace_back(steps, length, walk.clockwiseClose);
+                        walks.emplace_back(steps, length);
                     }
                     counts[length]++;
+                    // if(length == n) {
+                    //     f << toBinary64(steps, length) << std::endl;
+                    // }
                 }
             }
         }
     }
+    // f.close();
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
     for(int i = 1; i <= n; i++) {
@@ -427,14 +431,19 @@ void run(int n)
     }
     double totalTime = (double)(end - begin).count() / 1000000000.0;
     std::cout << "Total Time: " << totalTime << std::endl;
+    // std::cout << forward2Count << std::endl;
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     if(argc == 2)
     {
         int N = atoi(argv[1]);
         run(N);
     }
     return 0;
+
+    // LongWalk walk(0b000000001111111110011000000011111110, 36);
+    // int x = 0, y = 0;
+    // getEndPoint(walk.steps[0], walk.length, x, y);
+    // std::cout << extendible(&walk, 0, 0) << std::endl;
 }
