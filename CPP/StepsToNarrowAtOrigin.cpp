@@ -26,8 +26,8 @@ std::string toBinary64(uint64_t steps, uint16_t length) {
 
 void getEndPoint64(uint64_t steps, uint16_t length, int &x, int &y) {
     // Step direction impacted by the starting point (Manhattan Lattice).
-    int xStep = 1 - ((y & 1) << 1);
-    int yStep = 1 - ((x & 1) << 1);
+    int xStep = 1 - (!(y & 1) << 1);
+    int yStep = 1 - (!(x & 1) << 1);
     for(int i = 0; i < length; i++) {
         if(steps & 1) {
             y += yStep;
@@ -41,8 +41,8 @@ void getEndPoint64(uint64_t steps, uint16_t length, int &x, int &y) {
 }
 
 bool noLoop64(uint64_t steps, int limit, int &x, int &y, int endX, int endY) {
-    int xStep = 1 - ((y & 1) << 1);
-    int yStep = 1 - ((x & 1) << 1);
+    int xStep = 1 - (!(y & 1) << 1);
+    int yStep = 1 - (!(x & 1) << 1);
     bool noLoop = x != endX || y != endY;
     int i = 0;
     // Limit can be decreased to length-12 for most checks, but not all. Decide when passing length in.
@@ -78,8 +78,8 @@ inline bool canEscape(int approach, int x, int y, int minX, int maxX, int minY, 
 
 // Checks a 64-step segment for narrows including the given points (x3,y3) and (x4,y4).
 bool noNarrowHelper(uint64_t steps, uint16_t length, int &x1, int &y1, int &x2, int &y2, int x3, int y3, int x4, int y4) {
-    int xStep = 1 - ((y1 & 1) << 1);
-    int yStep = 1 - ((x1 & 1) << 1);
+    int xStep = 1 - (!(y1 & 1) << 1);
+    int yStep = 1 - (!(x1 & 1) << 1);
     for(int i = 0; i < length; i++) {
         x1 = x2;
         y1 = y2;
@@ -234,10 +234,7 @@ struct LongWalk {
     }
 
     void getEndPoint(int &x, int &y) {
-        if(var1.segments.empty()) {
-            x = 0;
-            y = 0;
-        } else {
+        if(!var1.segments.empty()) {
             for(int i = 0; i < steps()->size() - 1; i++) {
                 getEndPoint64((*steps())[i], 64, x, y);
             }
@@ -245,9 +242,9 @@ struct LongWalk {
         }
     }
 
-    bool noLoop(int endX, int endY) {
+    bool noLoop(int startX, int startY, int endX, int endY) {
         bool flag = true;
-        int i = 0, x = 0, y = 0;
+        int i = 0, x = startX, y = startY;
         while(flag && i < steps()->size() - 1) {
             flag = noLoop64((*steps())[i], 64, x, y, endX, endY);
             ++i;
@@ -259,10 +256,15 @@ struct LongWalk {
         return approach64(steps()->back(), lastSegmentLength());
     }
 
-    void getBoundingBox(int &minX, int &maxX, int &minY, int &maxY) {
+    void getBoundingBox(int startX, int startY, int &minX, int &maxX, int &minY, int &maxY) {
         // Step direction impacted by the starting point (Manhattan Lattice).
-        int xStep = 1, yStep = 1;
-        int x = 0, y = 0;
+        int xStep = 1 - (!(startY & 1) << 1);
+        int yStep = 1 - (!(startX & 1) << 1);
+        int x = startX, y = startY;
+        minX = startX;
+        maxX = startX;
+        minY = startY;
+        maxY = startY;
         uint64_t tempSteps = (*steps())[0];
         for(int i = 0; i < getLength(); ++i) {
             if(tempSteps & 1) {
@@ -290,7 +292,7 @@ struct LongWalk {
         (*steps())[0] = tempSteps;
     }
 
-    bool noNarrow(int x3, int y3, int x4, int y4) {
+    bool noNarrow(int startX, int startY, int x3, int y3, int x4, int y4) {
         if(getLength() < 10) {
             return true;
         }
@@ -298,7 +300,7 @@ struct LongWalk {
         int index = 0;
         int xStep = 1;
         int yStep = 1;
-        int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+        int x1 = startX, y1 = startY, x2 = startX, y2 = startY;
         while(length + 64 < getLength() - 10) {
             if(!noNarrowHelper((*steps())[index], 64, x1, y1, x2, y2, x3, y3, x4, y4)) {
                 return false;
@@ -319,28 +321,28 @@ struct LongWalk {
     // Can some valid walk go from the given point (one of the endpoints of the walk we're testing)
     // to the bounding box of the walk (minX to maxX, minY to maxY)? Or do all walks originating at the given point die out?
     // Returns 0 if not extendable (boxed), 1 if extendable (escapes bounding box), 2 if encountered the goal point.
-    int extendable(int startX, int startY) {
+    int extendable(int jailStartX, int jailStartY, int escapeStartX, int escapeStartY) {
         if(getLength() < 10) {
             return 2;
         }
 
         LongWalk jailBackup = *this;
         // Fips the walk. Start at origin only if called from reverse call or polygon, reversing a polygon does nothing.
-        if(startX == 0 && startY == 0) {
+        if(jailStartX == escapeStartX && jailStartY == escapeStartY) {
             reverse();
-            getEndPoint(startX, startY);
+            getEndPoint(escapeStartX, escapeStartY);
         }
 
         // std::cout << "Reversed: " << toBinary() << std::endl;
 
         int minX = 0, maxX = 0, minY = 0, maxY = 0;
-        getBoundingBox(minX, maxX, minY, maxY);
+        getBoundingBox(jailStartX, jailStartY, minX, maxX, minY, maxY);
 
         int firstTwoFlipped = (((*steps())[0] & 1ULL) << 1) | (((*steps())[0] >> 1) & 1ULL);
         int lastTwo = approach();
 
         // Can escape with a single step from the end of the jail, hopefully a good number fall into this case.
-        if(canEscape(lastTwo, startX, startY, minX, maxX, minY, maxY)) {
+        if(canEscape(lastTwo, escapeStartX, escapeStartY, minX, maxX, minY, maxY)) {
             *this = jailBackup;
             return 1;
         }
@@ -362,14 +364,14 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 h.getEndPoint(x, y);
-                bool noNarrowFlag = h.noNarrow(prevX, prevY, x, y);
+                bool noNarrowFlag = h.noNarrow(jailStartX, jailStartY, prevX, prevY, x, y);
                 // First firstTwoFlipped checks that the last two agree with the first step. Second check for first 2 agreeing with last step (2-turn rule).
                 if(x == 0 && y == 0 && ha != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 2 && noNarrowFlag) {
                     *this = jailBackup;
                     // std::cout << toBinary(h.steps[0], h.length) << std::endl;
                     return 2;
                 }
-                else if(h.noLoop(x, y) && noNarrowFlag) {
+                else if(h.noLoop(jailStartX, jailStartY, x, y) && noNarrowFlag) {
                     if(canEscape(ha, x, y, minX, maxX, minY, maxY)) {
                         *this = jailBackup;
                         return 1;
@@ -386,13 +388,13 @@ struct LongWalk {
                 int x = 0;
                 int y = 0;
                 v.getEndPoint(x, y);
-                bool noNarrowFlag = v.noNarrow(prevX, prevY, x, y);
+                bool noNarrowFlag = v.noNarrow(jailStartX, jailStartY, prevX, prevY, x, y);
                 if(x == 0 && y == 0 && va != 2 - (firstTwoFlipped >> 1) && firstTwoFlipped != 1 && noNarrowFlag) {
                     *this = jailBackup;
                     // std::cout << toBinary(h.steps[0], h.length) << std::endl;
                     return 2;
                 }
-                else if(v.noLoop(x, y) && noNarrowFlag) {
+                else if(v.noLoop(jailStartX, jailStartY, x, y) && noNarrowFlag) {
                     if(canEscape(va, x, y, minX, maxX, minY, maxY)) {
                         *this = jailBackup;
                         return 1;
@@ -407,307 +409,115 @@ struct LongWalk {
         *this = jailBackup;
         return 0;
     }
-
-    void reduce(int endX, int endY, int n, std::vector<int> const &stepsToOrigin) {
-        uint64_t tempSteps = (*steps())[0];
-        uint64_t length = getLength();
-        while(stepsToOrigin[approach64(tempSteps, length) * 40401 + (endX + 100) * 201 + endY + 100] > n - length) {
-            if(tempSteps & 1) {
-                endX = -endX;
-                endY -= 1;
-            }
-            else {
-                endX -= 1;
-                endY = -endY;
-            }
-
-            tempSteps >>= 1;
-            --length;
-
-            if(tempSteps & 1) {
-                tempSteps ^= (1ULL << length) - 1;
-                int temp = endX;
-                endX = endY;
-                endY = temp;
-            }
-        }
-
-        // If first step is vertical, flip to horizontal.
-        if(tempSteps & 1) {
-            tempSteps ^= (1ULL << length) - 1;
-        }
-
-        var1.segments[0] = tempSteps;
-        setLength(length);
-    }
-
-    void removeStep() {
-        if(getLength() > 0) {
-            int lastLen = lastSegmentLength();
-            if(lastLen == 1) {
-                steps()->pop_back();
-            } else {
-                steps()->back() = steps()->back() & ~(1ULL << (lastLen - 1));
-            }
-            setLength(getLength() - 1);
-        }
-    }
 };
 
-struct State {
-    LongWalk walk; // The walk (steps, length, parity), then the sum counts.
-    uint64_t childIndex[2]{};
+void floodFill(int startX, int startY, std::vector<int> &steps) {
+    int seen = 0;
+    std::deque<LongWalk> walks;
+    // Empty walk to start.
+    walks.emplace_back(0, 0);
 
-    // Zero as the default child index should be ok because no paths reduce to nothing.
-    State(uint64_t steps, uint64_t length):
-        walk(steps, length), childIndex{0,0} {}
+    steps[0 * 40401 + (startX + 100) * 201 + startY + 100] = 0;
+    steps[1 * 40401 + (startX + 100) * 201 + startY + 100] = 0;
+    steps[2 * 40401 + (startX + 100) * 201 + startY + 100] = 0;
+    steps[3 * 40401 + (startX + 100) * 201 + startY + 100] = 0;
 
-    State(LongWalk walk):
-        walk(walk), childIndex{0,0} {}
-};
+    while(seen < 161600) {
+        LongWalk current = walks.front();
 
-std::vector<int> getStepsToOrigin() {
-    std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToOriginFlipped.txt)");
-    std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
-    std::stringstream stream(content);
-    std::vector<int> stepsToOrigin;
-    int num;
-    while(stream >> num) {
-        stepsToOrigin.push_back(num);
-    }
-    return stepsToOrigin;
-}
-
-
-std::vector<State> makeAutomaton(int n) {
-    std::vector<int> stepsToOrigin = getStepsToOrigin();
-
-    std::vector<State> states;
-    states.reserve(91355100);
-    // states.reserve(307000000);
-    states.emplace_back(0, 0);
-
-    uint64_t untreated = 0;
-
-    while(untreated < states.size()) {
-        int prevX = 0, prevY = 0;
-        states[untreated].walk.getEndPoint(prevX, prevY);
-
-        // Horizontal Step.
-        if(states[untreated].walk.approach() != 2 || states[untreated].walk.getLength() < 2) {
-            LongWalk h = states[untreated].walk.horizontalStep();
-            int x = 0, y = 0;
-            h.getEndPoint(x, y);
-            if(h.noLoop(x, y) && h.noNarrow(prevX, prevY, x, y)) {
-                int forward_extendable = h.extendable(x, y);
-                if(forward_extendable == 2 || (forward_extendable && h.extendable(0, 0))) {
-                    h.reduce(x, y, n, stepsToOrigin);
-                    
-                    State parent = states[0];
-                    uint64_t tempSteps = (*h.steps())[0];
-                    for(int i = 0; i < h.getLength() - 1; i++) {
-                        parent = states[parent.childIndex[tempSteps & 1]];
-                        tempSteps >>= 1;
-                    }
-                    if(!parent.childIndex[tempSteps]) {
-                        states.emplace_back(h);
-                        states[untreated].childIndex[0] = states.size() - 1;
-                    } else {
-                        states[untreated].childIndex[0] = parent.childIndex[tempSteps];
-                    }
-                }                
-            }
+        if(seen % 100 == 0) {
+            std::cout << seen << " " << current.getLength() << " " << walks.size() << std::endl;
         }
 
-        // Vertical Step.
-        if(states[untreated].walk.approach() != 1 || states[untreated].walk.getLength() < 2) {
-            LongWalk v = states[untreated].walk.verticalStep();
-            int x = 0, y = 0;
-            v.getEndPoint(x, y);
-            if(v.noLoop(x, y) && v.noNarrow(prevX, prevY, x, y)) {
-                int forward_extendable = v.extendable(x, y);
-                if(forward_extendable == 2 || (forward_extendable && v.extendable(0, 0))) {
-                    v.reduce(x, y, n, stepsToOrigin);
-
-                    State parent = states[0];
-                    uint64_t tempSteps = (*v.steps())[0];
-                    for(int i = 0; i < v.getLength() - 1; i++) {
-                        parent = states[parent.childIndex[tempSteps & 1]];
-                        tempSteps >>= 1;
-                    }
-                    if(!parent.childIndex[tempSteps]) {
-                        states.emplace_back(v);
-                        states[untreated].childIndex[1] = states.size() - 1;
-                    } else {
-                        states[untreated].childIndex[1] = parent.childIndex[tempSteps];
+        if(seen > 157000) {
+            // std::cout << seen << " " << walks.size() << " " << current.toBinary() << std::endl;
+            if(walks.size() == 1) {
+                for(int a = 0; a <= 3; a++) {
+                    for(int x = -100; x <= 100; x++) {
+                        for(int y = -100; y <= 100; y++) {
+                            if(steps[a * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
+                                std::cout << a << ":(" << x << "," << y << ") ";
+                            }
+                        }
                     }
                 }
+                std::cout << std::endl;
             }
         }
-        ++untreated;
-    }
-
-    // Reset each state's number variables so they're no longer pattern and length, instead automaton iteration counts.
-    for(auto & state : states) {
-        state.walk.var1 = 0;
-        state.walk.var2 = 0;
-    }
-    return states;
-}
-
-BigSum taxi(int automaton_size, int num_iterations) {
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::vector<State> automaton = makeAutomaton(automaton_size);
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    double totalTime = (double)(end - begin).count() / 1000000000.0;
-    std::cout << automaton.size() << "-state automaton generated in " << totalTime << " seconds." << std::endl;
-
-    // Sets "H" to current count 1.
-    automaton[1].walk.var1 = 1;
-
-    begin = std::chrono::steady_clock::now();
-
-    // Ends one step early, because on the final loop there's no need to move var2 to var1.
-    for(int n = 2; n < num_iterations; ++n) {
-        for(auto & state : automaton) {
-            if(state.walk.var1) {
-                if(state.childIndex[0]) {
-                    automaton[state.childIndex[0]].walk.var2 += state.walk.var1;
-                }
-                if(state.childIndex[1]) {
-                    automaton[state.childIndex[1]].walk.var2 += state.walk.var1;
-                }
-            }
-        }
-        for(auto & state : automaton) {
-            state.walk.var1 = state.walk.var2;
-            state.walk.var2 = 0;
-        }
-
-        int i = 100;
-        if((n + 1) % i == 0) {
-            BigSum taxiWalks = 0;
-            for(auto & state : automaton) {
-                if(state.walk.var1) {
-                    if(state.childIndex[0]) {
-                        taxiWalks += state.walk.var1;
-                    }
-                    if(state.childIndex[1]) {
-                        taxiWalks += state.walk.var1;
-                    }
-                }
-            }
-            end = std::chrono::steady_clock::now();
-            double totalTime = (double)(end - begin).count() / 1000000000.0;
-            std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << ". This group of " << i << " took " << totalTime << " seconds." << std::endl;
-            std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
-            begin = end;
-        }
-    }
-    return 0;
-
-    // std::cout << "Computing final sum..." << std::endl;
-
-    // BigSum taxiWalks = 0;
-    // for(auto & state : automaton) {
-    //     if(state.walk.var1) {
-    //         if(state.childIndex[0]) {
-    //             taxiWalks += state.walk.var1;
-    //         }
-    //         if(state.childIndex[1]) {
-    //             taxiWalks += state.walk.var1;
-    //         }
-    //     }
-    // }
-    // return taxiWalks;
-}
-
-
-uint64_t bruteForce(int N)
-{
-    std::vector<LongWalk> walks;
-    // H start.
-    walks.emplace_back(0, 1);
-
-    uint64_t count = 0;
-
-    while(!walks.empty()) {
-        LongWalk current = walks.back();
-        walks.pop_back();
-        int prevX = 0, prevY = 0;
+        walks.pop_front();
+        int prevX = startX, prevY = startY;
         current.getEndPoint(prevX, prevY);
 
         // Horizontal Step.
         if(current.approach() != 2 || current.getLength() < 2) {
-            int x = 0, y = 0;
+            int x = startX, y = startY;
             LongWalk h = current.horizontalStep();
+            // if(seen == 157780) {
+            //     std::cout << "H: " << h.toBinary() << std::endl;
+            // }
             h.getEndPoint(x, y);
-            bool noNarrowFlag = h.noNarrow(prevX, prevY, x, y);
-            if(h.noLoop(x, y) && noNarrowFlag) {
-                int forward_extendible = h.extendable(x, y);
-                if(forward_extendible == 2 || (forward_extendible && h.extendable(0, 0))) {
-                    if(h.getLength() != N) {
-                        walks.push_back(h);
-                    } else {
-                        count++;
+            if(-100 <= x && x <= 100 && -100 <= y && y <= 100) {
+                bool noNarrowFlag = h.noNarrow(startX, startY, prevX, prevY, x, y);
+                // if(h.noLoop(startX, startY, x, y) && noNarrowFlag) {
+                    if(steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] > h.getLength()) {
+                        if(steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
+                            seen++;
+                        }
+                        walks.emplace_back(h);
+                        steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] = h.getLength();
                     }
-                }
+                // }
             }
         }
 
         // Vertical Step.
         if(current.approach() != 1 || current.getLength() < 2) {
-            int x = 0, y = 0;
+            int x = startX, y = startY;
             LongWalk v = current.verticalStep();
+            // if(seen == 157780) {
+            //     std::cout << "V: " << v.toBinary() << std::endl;
+            // }
             v.getEndPoint(x, y);
-            bool noNarrowFlag = v.noNarrow(prevX, prevY, x, y);
-            if(v.noLoop(x, y) && noNarrowFlag) {
-                int forward_extendible = v.extendable(x, y);
-                if(forward_extendible == 2 || (forward_extendible && v.extendable(0, 0))) {
-                    if(v.getLength() != N) {
-                        walks.push_back(v);
-                    } else {
-                        count++;
+            // if(prevX == 18 && prevY == 39) {
+            //     std::cout << current.approach() << " " << current.toBinary() << std::endl;
+            // }
+            if(-100 <= x && x <= 100 && -100 <= y && y <= 100) {
+                bool noNarrowFlag = v.noNarrow(startX, startY, prevX, prevY, x, y);
+                // if(v.noLoop(startX, startY, x, y) && noNarrowFlag) {
+                    if(steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] > v.getLength()) {
+                        if(steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
+                            seen++;
+                        }
+                        steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] = v.getLength();
+                        walks.emplace_back(v);
                     }
-                }
+                // }
             }
         }
     }
-    return count << 1;
 }
 
-void run(int automaton_size, int num_iterations) {
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    if(automaton_size > 0) {
-        BigSum t = taxi(automaton_size, num_iterations);
-        // << '0' << is to "multiply by 2". Only works for binary outputs.
-        std::cout << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
-    } else {
-        std::cout << num_iterations << ": " << bruteForce(num_iterations) << std::endl;
-    }
+// TODO: APPROACH BASED ON THE WALK THAT WOULD END AT A GIVEN POINT, NOT THE PATH TO GET THERE FROM THE ORIGIN.
+// POSSIBLE PROBLEM WITH SOME POINTS MISSING SOME ORIGIN->POINT APPROACHES.
 
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-    double totalTime = (double)(end - begin).count() / 1000000000.0;
-    std::cout << "Total Time: " << totalTime << std::endl;
-}
-
-
-
+// HH -> 00 (0)
+// HV -> 10 (2)
+// VH -> 01 (1)
+// VV -> 11 (3)
 int main(int argc, char *argv[]) {
-    if(argc == 2) {
-        int N = atoi(argv[1]);
-        run(N, N);
-    } else if(argc == 3) {
-        int automaton_size = atoi(argv[1]);
-        int num_iterations = atoi(argv[2]);
-        run(automaton_size, num_iterations);
+    std::vector<int> steps(161604, INT_MAX);
+
+    // If you can reach any of these points, you have value (you may produce a narrow before the "closable" check) and should not be reduced.
+    // We ignore the possibility of narrows at (1,0) and (-1,0) because we only enumerate walks that start H.
+    floodFill(0, 0, steps);
+    floodFill(0, 1, steps);
+    floodFill(0, -1, steps);
+
+    std::ofstream file("StepsToNarrowAtOriginNoLoop.txt");
+    for(const auto &step : steps) {
+        file << step << " ";
     }
+    file.close();
+    std::cout << "Done!" << std::endl;
     return 0;
-
-
-
-    // LongWalk walk(0b000000001111111110011000000011111110, 36);
-    // int x = 0, y = 0;
-    // walk.getEndPoint(x, y);
-    // std::cout << walk.extendable(0, 0) << std::endl;
 }

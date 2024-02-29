@@ -147,6 +147,29 @@ struct BigSum {
     operator bool() {
         return segments.size() > 1 || (segments.size() == 1 && segments[0] != 0ULL);
     }
+
+    std::string to_string() const {
+        if(segments.empty()) {
+            return "Empty!";
+        } else {
+            std::string out = "";
+            for(int i = segments.size() - 1; i >= 0; --i) {
+			    out += toBinary64(segments[i], 64);
+            }
+
+            // Avoid leading 0s.
+            int i = 0;
+            while(i < out.length() && out[i] == '0') {
+                ++i;
+            }
+            return out.substr(i);
+        }
+    }
+
+    friend std::ostream& operator<<(std::ostream &stream, const BigSum &bigsum) {
+        stream << bigsum.to_string();
+        return stream;
+	}
 };
 
 
@@ -773,9 +796,11 @@ BigSum taxi(int automaton_size, int num_iterations) {
             }
         }
         for(auto & state : automaton) {
+            // std::cout << state.walk.var2 << " ";
             state.walk.var1 = state.walk.var2;
             state.walk.var2 = 0;
         }
+        // std::cout << std::endl;
 
         int i = 100;
         if((n + 1) % i == 0) {
@@ -797,22 +822,22 @@ BigSum taxi(int automaton_size, int num_iterations) {
             begin = end;
         }
     }
-    return 0;
+    // return 0;
 
-    // std::cout << "Computing final sum..." << std::endl;
+    std::cout << "Computing final sum..." << std::endl;
 
-    // BigSum taxiWalks = 0;
-    // for(auto & state : automaton) {
-    //     if(state.walk.var1) {
-    //         if(state.children[0]) {
-    //             taxiWalks += state.walk.var1;
-    //         }
-    //         if(state.children[1]) {
-    //             taxiWalks += state.walk.var1;
-    //         }
-    //     }
-    // }
-    // return taxiWalks;
+    BigSum taxiWalks = 0;
+    for(auto & state : automaton) {
+        if(state.walk.var1) {
+            if(state.childIndex[0]) {
+                taxiWalks += state.walk.var1;
+            }
+            if(state.childIndex[1]) {
+                taxiWalks += state.walk.var1;
+            }
+        }
+    }
+    return taxiWalks;
 }
 
 

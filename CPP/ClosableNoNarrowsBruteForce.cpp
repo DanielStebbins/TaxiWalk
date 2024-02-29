@@ -256,8 +256,8 @@ uint64_t reverse(uint64_t steps, uint16_t length) {
 // Can some valid walk go from the given point (one of the endpoints of the walk we're testing)
 // to the bounding box of the walk (minX to maxX, minY to maxY)? Or do all walks originating at
 // the given point die out?
-// Returns 0 if not extendible (boxed), 1 if extendible (escapes bounding box), 2 if encountered the goal point.
-int extendible(LongWalk *jail, int startX, int startY) {
+// Returns 0 if not extendable (boxed), 1 if extendable (escapes bounding box), 2 if encountered the goal point.
+int extendable(LongWalk *jail, int startX, int startY) {
     if(jail->length < 10) {
         return 2;
     }
@@ -379,11 +379,11 @@ void run(int n) {
             walk.length = length;
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
-                int forward_extendible = extendible(&walk, x, y);
+                int forward_extendible = extendable(&walk, x, y);
                 // if(forward_extendible == 2) {
                 //     forward2Count++;
                 // }
-                if(forward_extendible == 2 || (forward_extendible && extendible(&walk, 0, 0))) {
+                if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
                         walks.emplace_back(steps, length);
                     }
@@ -407,11 +407,11 @@ void run(int n) {
             walk.length = length;
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
-                int forward_extendible = extendible(&walk, x, y);
+                int forward_extendible = extendable(&walk, x, y);
                 // if(forward_extendible == 2) {
                 //     forward2Count++;
                 // }
-                if(forward_extendible == 2 || (forward_extendible && extendible(&walk, 0, 0))) {
+                if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
                     if(length != n) {
                         walks.emplace_back(steps, length);
                     }
@@ -445,5 +445,5 @@ int main(int argc, char *argv[]) {
     // LongWalk walk(0b000000001111111110011000000011111110, 36);
     // int x = 0, y = 0;
     // getEndPoint(walk.steps[0], walk.length, x, y);
-    // std::cout << extendible(&walk, 0, 0) << std::endl;
+    // std::cout << extendable(&walk, 0, 0) << std::endl;
 }
