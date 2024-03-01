@@ -253,7 +253,11 @@ struct LongWalk {
     }
 
     inline int approach() {
-        return approach64(steps()->back(), lastSegmentLength());
+        if(steps()->size() == 1 || lastSegmentLength() >= 2) {
+            return approach64(steps()->back(), lastSegmentLength());
+        } else {
+            return ((steps()->back() & 1) << 1) + (((*steps())[steps()->size() - 2] >> 63) & 1);
+        }
     }
 
     void getBoundingBox(int startX, int startY, int &minX, int &maxX, int &minY, int &maxY) {
@@ -412,6 +416,7 @@ struct LongWalk {
 };
 
 void floodFill(int startX, int startY, std::vector<int> &steps) {
+    std::cout << "Starting with " << startX << ", " << startY << std::endl;
     int seen = 0;
     std::deque<LongWalk> walks;
     // Empty walk to start.
@@ -422,20 +427,22 @@ void floodFill(int startX, int startY, std::vector<int> &steps) {
     steps[2 * 40401 + (startX + 100) * 201 + startY + 100] = 0;
     steps[3 * 40401 + (startX + 100) * 201 + startY + 100] = 0;
 
-    while(seen < 161600) {
+    while(seen < 161600 && !walks.empty()) {
         LongWalk current = walks.front();
+        // if(current.getLength() < 10) {
+        //     std::cout << current.toBinary() << std::endl;
+        // }
+        // if(startX == 0 && startY == 1) {
+        //     std::cout << seen << " " << current.getLength() << " " << walks.size() << std::endl;
+        // }
 
-        if(seen % 100 == 0) {
-            std::cout << seen << " " << current.getLength() << " " << walks.size() << std::endl;
-        }
-
-        if(seen > 157000) {
+        if(seen > 10) {
             // std::cout << seen << " " << walks.size() << " " << current.toBinary() << std::endl;
             if(walks.size() == 1) {
                 for(int a = 0; a <= 3; a++) {
                     for(int x = -100; x <= 100; x++) {
                         for(int y = -100; y <= 100; y++) {
-                            if(steps[a * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
+                            if(steps[a * 40401 + (x + 100) * 201 + y + 100] == INT_MAX && abs(x) < 98 && abs(y) < 98) {
                                 std::cout << a << ":(" << x << "," << y << ") ";
                             }
                         }
@@ -455,18 +462,29 @@ void floodFill(int startX, int startY, std::vector<int> &steps) {
             // if(seen == 157780) {
             //     std::cout << "H: " << h.toBinary() << std::endl;
             // }
+            
             h.getEndPoint(x, y);
+            if(current.steps()->back() == 0b1110001111111111111111111111111111000000000000000000000000001110 && current.getLength() == 64) {
+                std::cout << "H: " << h.toBinary() << " " << x << " " << y << std::endl;
+            }
+            if(x == -5 && y == 2) {
+                std::cout << h.approach() << " " << h.toBinary() << std::endl;
+            }
             if(-100 <= x && x <= 100 && -100 <= y && y <= 100) {
                 bool noNarrowFlag = h.noNarrow(startX, startY, prevX, prevY, x, y);
-                // if(h.noLoop(startX, startY, x, y) && noNarrowFlag) {
-                    if(steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] > h.getLength()) {
-                        if(steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
-                            seen++;
-                        }
-                        walks.emplace_back(h);
-                        steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] = h.getLength();
+                if(current.steps()->back() == 0b1110001111111111111111111111111111000000000000000000000000001110 && current.getLength() == 64) {
+                    std::cout << "Narrow? " << (1 - (int) noNarrowFlag) << std::endl;
+                }
+                if(steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] > h.getLength()) {
+                    if(steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
+                        seen++;
                     }
-                // }
+                    walks.emplace_back(h);
+                    steps[h.approach() * 40401 + (x + 100) * 201 + y + 100] = h.getLength();
+                    if(x == -5 && y == 2) {
+                        std::cout << "Accepted " << h.approach() << " " << h.toBinary() << std::endl;
+                    }
+                }
             }
         }
 
@@ -478,27 +496,33 @@ void floodFill(int startX, int startY, std::vector<int> &steps) {
             //     std::cout << "V: " << v.toBinary() << std::endl;
             // }
             v.getEndPoint(x, y);
-            // if(prevX == 18 && prevY == 39) {
-            //     std::cout << current.approach() << " " << current.toBinary() << std::endl;
-            // }
+            if(current.steps()->back() == 0b1110001111111111111111111111111111000000000000000000000000001110 && current.getLength() == 64) {
+                std::cout << "V: " << v.toBinary() << " " << x << " " << y << std::endl;
+            }
+            if(x == -5 && y == 2) {
+                std::cout << v.approach() << " " << v.toBinary() << std::endl;
+            }
             if(-100 <= x && x <= 100 && -100 <= y && y <= 100) {
                 bool noNarrowFlag = v.noNarrow(startX, startY, prevX, prevY, x, y);
-                // if(v.noLoop(startX, startY, x, y) && noNarrowFlag) {
-                    if(steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] > v.getLength()) {
-                        if(steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
-                            seen++;
-                        }
-                        steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] = v.getLength();
-                        walks.emplace_back(v);
+                if(current.steps()->back() == 0b1110001111111111111111111111111111000000000000000000000000001110 && current.getLength() == 64) {
+                    std::cout << "Narrow? " << (1 - (int) noNarrowFlag) << std::endl;
+                }
+                if(steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] > v.getLength()) {
+                    if(steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] == INT_MAX) {
+                        seen++;
                     }
-                // }
+                    steps[v.approach() * 40401 + (x + 100) * 201 + y + 100] = v.getLength();
+                    walks.emplace_back(v);
+                    if(x == -5 && y == 2) {
+                        std::cout << "Accepted " << v.approach() << " " << v.toBinary() << std::endl;
+                    }
+                }
             }
         }
     }
 }
 
 // TODO: APPROACH BASED ON THE WALK THAT WOULD END AT A GIVEN POINT, NOT THE PATH TO GET THERE FROM THE ORIGIN.
-// POSSIBLE PROBLEM WITH SOME POINTS MISSING SOME ORIGIN->POINT APPROACHES.
 
 // HH -> 00 (0)
 // HV -> 10 (2)
@@ -513,7 +537,7 @@ int main(int argc, char *argv[]) {
     floodFill(0, 1, steps);
     floodFill(0, -1, steps);
 
-    std::ofstream file("StepsToNarrowAtOriginNoLoop.txt");
+    std::ofstream file("StepsToNarrowAtOrigin.txt");
     for(const auto &step : steps) {
         file << step << " ";
     }

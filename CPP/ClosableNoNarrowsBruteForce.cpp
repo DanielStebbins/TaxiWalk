@@ -161,9 +161,14 @@ inline int approach(uint64_t steps, uint16_t length) {
     return steps >> (length - 2) & 3;
 }
 
-inline int longApproach(LongWalk *walk) {
-    return approach(walk->steps.back(), walk->lastSegmentLength());
-}
+// Needs 64 fix.
+// inline int longApproach(LongWalk *walk) {
+//     if((*(*walk).steps()).size() == 1 || walk->lastSegmentLength() >= 2) {
+//         return approach((*walk).steps()->back(), walk->lastSegmentLength());
+//     } else {
+//         return ((walk->steps()->back() & 1) << 1) + (((*walk->steps())[walk->steps()->size() - 2] >> 63) & 1);
+//     }
+// }
 
 void getBoundingBox(uint64_t steps, uint16_t length, int &minX, int &maxX, int &minY, int &maxY) {
     // Step direction impacted by the starting point (Manhattan Lattice).

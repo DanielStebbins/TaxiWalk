@@ -255,8 +255,16 @@ struct LongWalk {
         return flag && noLoop64(steps()->back(), lastSegmentLength() - 12, x, y, endX, endY);
     }
 
+    // inline int approach() {
+    //     return approach64(steps()->back(), lastSegmentLength());
+    // }
+
     inline int approach() {
-        return approach64(steps()->back(), lastSegmentLength());
+        if(steps()->size() == 1 || lastSegmentLength() >= 2) {
+            return approach64(steps()->back(), lastSegmentLength());
+        } else {
+            return ((steps()->back() & 1) << 1) + (((*steps())[steps()->size() - 2] >> 63) & 1);
+        }
     }
 
     void getBoundingBox(int &minX, int &maxX, int &minY, int &maxY) {
