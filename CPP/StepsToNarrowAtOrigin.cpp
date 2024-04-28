@@ -523,6 +523,23 @@ void floodFill(int startX, int startY, std::vector<int> &steps) {
 }
 
 // TODO: APPROACH BASED ON THE WALK THAT WOULD END AT A GIVEN POINT, NOT THE PATH TO GET THERE FROM THE ORIGIN.
+std::vector<int> frontApproachConversion(std::vector<int> steps) {
+    std::vector<int> out(161604, 0);
+    for(int x = -100; x <= 100; x++) {
+        for(int y = -100; y <= 100; y++) {
+            int offset = (x + 100) * 201 + y + 100;
+            // Starting pair for end of forward section, second pairs for end of backward section.
+            // HH (0) cannot use VH (2); VV (3) cannot use HV (1).
+            out[0 * 40401 + offset] = std::min({steps[0 * 40401 + offset], steps[1 * 40401 + offset], steps[3 * 40401 + offset]});
+            out[3 * 40401 + offset] = std::min({steps[0 * 40401 + offset], steps[2 * 40401 + offset], steps[3 * 40401 + offset]});
+
+            // HV (1) cannot use VV (3) or VH (2); VH (2) cannot use HH (0) or HV (1).
+            out[1 * 40401 + offset] = std::min(steps[0 * 40401 + offset], steps[1 * 40401 + offset]);
+            out[2 * 40401 + offset] = std::min(steps[2 * 40401 + offset], steps[3 * 40401 + offset]);
+        }
+    }
+    return out;
+}
 
 // HH -> 00 (0)
 // HV -> 10 (2)
@@ -536,10 +553,23 @@ int main(int argc, char *argv[]) {
     floodFill(0, 0, steps);
     floodFill(0, 1, steps);
     floodFill(0, -1, steps);
+    std::vector<int> out = frontApproachConversion(steps);
+
+
+    // std::cout << out[0 * 40401 + (0 + 100) * 201 + 1 + 100] << std::endl;
+    // std::cout << out[1 * 40401 + (0 + 100) * 201 + 1 + 100] << std::endl;
+    // std::cout << out[2 * 40401 + (0 + 100) * 201 + 1 + 100] << std::endl;
+    // std::cout << out[3 * 40401 + (0 + 100) * 201 + 1 + 100] << std::endl;
+
+
+    std::cout << steps[0 * 40401 + (3 + 100) * 201 + 0 + 100] << std::endl;
+    std::cout << steps[1 * 40401 + (3 + 100) * 201 + 0 + 100] << std::endl;
+    std::cout << steps[2 * 40401 + (3 + 100) * 201 + 0 + 100] << std::endl;
+    std::cout << steps[3 * 40401 + (3 + 100) * 201 + 0 + 100] << std::endl;
 
     std::ofstream file("StepsToNarrowAtOrigin.txt");
-    for(const auto &step : steps) {
-        file << step << " ";
+    for(const auto &o : out) {
+        file << o << " ";
     }
     file.close();
     std::cout << "Done!" << std::endl;

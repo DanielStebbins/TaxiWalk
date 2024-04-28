@@ -23,6 +23,14 @@ std::string toBinary64(uint64_t steps, uint16_t length) {
     return binary;
 }
 
+// HH -> 00 (0)
+// HV -> 10 (2)
+// VH -> 01 (1)
+// VV -> 11 (3)
+inline int approach64(uint64_t steps, uint16_t length) {
+    return steps >> (length - 2) & 3;
+}
+
 struct State {
     uint64_t length;
     uint64_t steps;
@@ -76,6 +84,14 @@ struct LongWalk {
 
     inline uint64_t lastSegmentLength() { 
         return length - (64 * (steps.size() - 1));
+    }
+
+    inline int approach() {
+        if(steps.size() == 1 || lastSegmentLength() >= 2) {
+            return approach64(steps.back(), lastSegmentLength());
+        } else {
+            return ((steps.back() & 1) << 1) + ((steps[steps.size() - 2] >> 63) & 1);
+        }
     }
 
     // Each segment is right to left, but the segments stack left to right (last steps are in the leftmost bits of the rightmost u64).
@@ -152,23 +168,6 @@ bool longNoLoop(LongWalk *walk, int x, int y, int endX, int endY) {
     }
     return flag && noLoop(walk->steps.back(), walk->lastSegmentLength() - 12, x, y, endX, endY);
 }
-
-// HH -> 00 (0)
-// HV -> 10 (2)
-// VH -> 01 (1)
-// VV -> 11 (3)
-inline int approach(uint64_t steps, uint16_t length) {
-    return steps >> (length - 2) & 3;
-}
-
-// Needs 64 fix.
-// inline int longApproach(LongWalk *walk) {
-//     if((*(*walk).steps()).size() == 1 || walk->lastSegmentLength() >= 2) {
-//         return approach((*walk).steps()->back(), walk->lastSegmentLength());
-//     } else {
-//         return ((walk->steps()->back() & 1) << 1) + (((*walk->steps())[walk->steps()->size() - 2] >> 63) & 1);
-//     }
-// }
 
 void getBoundingBox(uint64_t steps, uint16_t length, int &minX, int &maxX, int &minY, int &maxY) {
     // Step direction impacted by the starting point (Manhattan Lattice).
@@ -275,13 +274,11 @@ int extendable(LongWalk *jail, int startX, int startY) {
         getEndPoint(jail->steps[0], jail->length, startX, startY);
     }
 
-
-
     int minX = 0, maxX = 0, minY = 0, maxY = 0;
     getBoundingBox(jail->steps[0], jail->length, minX, maxX, minY, maxY);
 
     int firstTwoFlipped = ((jail->steps[0] & 1) << 1) | ((jail->steps[0] >> 1) & 1);
-    int lastTwo = approach(jail->steps[0], jail->length);
+    int lastTwo = jail->approach();
 
     // Can escape with a single step from the end of the jail, hopefully a good number fall into this case.
     if(canEscape(lastTwo, startX, startY, minX, maxX, minY, maxY)) {
@@ -289,20 +286,25 @@ int extendable(LongWalk *jail, int startX, int startY) {
         return 1;
     }
 
+    bool print = false;
     std::deque<LongWalk> escapes;
     escapes.push_back(*jail);
     while(!escapes.empty()) {
-        LongWalk *current = &escapes.front();
-        int a = longApproach(current);
+        if(escapes.size() > 10000 && !print) {
+            std::cout << jail->toBinary() << std::endl;
+            print = true;
+        }
+        LongWalk current = escapes.front();
+        int a = current.approach();
         int prevX = 0;
         int prevY = 0;
-        getLongEndPoint(current, prevX, prevY);
+        getLongEndPoint(&current, prevX, prevY);
 
         // Horizontal Step.
         if(a != 2) {
-            LongWalk h = current->horizontalStep();
+            LongWalk h = current.horizontalStep();
             // std::cout << h.toBinary() << std::endl;
-            int ha = longApproach(&h);
+            int ha = h.approach();
             int x = 0;
             int y = 0;
             getLongEndPoint(&h, x, y);
@@ -324,9 +326,9 @@ int extendable(LongWalk *jail, int startX, int startY) {
 
         // Vertical Step.
         if(a != 1) {
-            LongWalk v = current->verticalStep();
+            LongWalk v = current.verticalStep();
             // std::cout << v.toBinary() << std::endl;
-            int va = longApproach(&v);
+            int va = v.approach();
             int x = 0;
             int y = 0;
             getLongEndPoint(&v, x, y);
@@ -374,7 +376,7 @@ void run(int n) {
         getEndPoint(current.steps, current.length, prevX, prevY);
 
         // Horizontal Step.
-        if(approach(current.steps, current.length) != 2 || current.length < 2) {
+        if(approach64(current.steps, current.length) != 2 || current.length < 2) {
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps;
             int x = 0, y = 0, _x = 0, _y = 0;
@@ -401,7 +403,7 @@ void run(int n) {
         }
 
         // Vertical Step.
-       if(approach(current.steps, current.length) != 1 || current.length < 2) {
+       if(approach64(current.steps, current.length) != 1 || current.length < 2) {
             uint16_t length = current.length + 1;
             uint64_t steps = current.steps | (1ULL << current.length);
 
@@ -431,11 +433,14 @@ void run(int n) {
     // f.close();
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
+    std::ofstream file("out.txt", std::ios_base::app);
     for(int i = 1; i <= n; i++) {
         std::cout << "N=" << i << ": " << (counts[i] << 1) << std::endl;
+        file << "N=" << i << ": " << (counts[i] << 1) << std::endl;
     }
     double totalTime = (double)(end - begin).count() / 1000000000.0;
     std::cout << "Total Time: " << totalTime << std::endl;
+    file.close();
     // std::cout << forward2Count << std::endl;
 }
 

@@ -475,7 +475,7 @@ struct State {
 };
 
 std::vector<int> getStepsToOrigin() {
-    std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToOriginFlipped.txt)");
+    std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToNarrowAtOrigin.txt)");
     std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
     std::stringstream stream(content);
     std::vector<int> stepsToOrigin;
@@ -569,6 +569,9 @@ BigSum taxi(int automaton_size, int num_iterations) {
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
     std::cout << automaton.size() << "-state automaton generated in " << totalTime << " seconds." << std::endl;
+    std::ofstream file("out.txt", std::ios_base::app);
+    file << std::endl << std::endl << automaton.size() << "-state automaton generated in " << totalTime << " seconds." << std::endl;
+    file.close();
 
     // Sets "H" to current count 1.
     automaton[1].walk.var1 = 1;
@@ -609,6 +612,10 @@ BigSum taxi(int automaton_size, int num_iterations) {
             double totalTime = (double)(end - begin).count() / 1000000000.0;
             std::cout << "Completed iteration " << n + 1 << " of " << num_iterations << ". This group of " << i << " took " << totalTime << " seconds." << std::endl;
             std::cout << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
+            std::ofstream file("out.txt", std::ios_base::app);
+            file << "Completed iteration " << n + 1 << " of " << num_iterations << ". This group of " << i << " took " << totalTime << " seconds." << std::endl;
+            file << "A=" << automaton_size << ", I=" << n + 1 << ": " << taxiWalks << '0' << std::endl;
+            file.close();
             begin = end;
         }
     }
@@ -690,6 +697,10 @@ void run(int automaton_size, int num_iterations) {
         BigSum t = taxi(automaton_size, num_iterations);
         // << '0' << is to "multiply by 2". Only works for binary outputs.
         std::cout << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
+        
+        std::ofstream file("out.txt", std::ios_base::app);
+        file << "A=" << automaton_size << ", I=" << num_iterations << ": " << t << '0' << std::endl;
+        file.close();
     } else {
         std::cout << num_iterations << ": " << bruteForce(num_iterations) << std::endl;
     }
@@ -697,6 +708,9 @@ void run(int automaton_size, int num_iterations) {
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
     std::cout << "Total Time: " << totalTime << std::endl;
+    std::ofstream file("out.txt", std::ios_base::app);
+    file << "Total Time: " << totalTime << std::endl;
+    file.close();
 }
 
 
