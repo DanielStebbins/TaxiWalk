@@ -462,15 +462,15 @@ struct LongWalk {
     }
 };
 
-struct State {
+struct ShortWalk {
     LongWalk walk; // The walk (steps, length, parity), then the sum counts.
     uint64_t childIndex[2]{};
 
     // Zero as the default child index should be ok because no paths reduce to nothing.
-    State(uint64_t steps, uint64_t length):
+    ShortWalk(uint64_t steps, uint64_t length):
         walk(steps, length), childIndex{0,0} {}
 
-    State(LongWalk walk):
+    ShortWalk(LongWalk walk):
         walk(walk), childIndex{0,0} {}
 };
 
@@ -487,10 +487,10 @@ std::vector<int> getStepsToOrigin() {
 }
 
 
-std::vector<State> makeAutomaton(int n) {
+std::vector<ShortWalk> makeAutomaton(int n) {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
 
-    std::vector<State> states;
+    std::vector<ShortWalk> states;
     states.reserve(91355100);
     // states.reserve(307000000);
     states.emplace_back(0, 0);
@@ -511,7 +511,7 @@ std::vector<State> makeAutomaton(int n) {
                 if(forward_extendable == 2 || (forward_extendable && h.extendable(0, 0))) {
                     h.reduce(x, y, n, stepsToOrigin);
                     
-                    State parent = states[0];
+                    ShortWalk parent = states[0];
                     uint64_t tempSteps = (*h.steps())[0];
                     for(int i = 0; i < h.getLength() - 1; i++) {
                         parent = states[parent.childIndex[tempSteps & 1]];
@@ -537,7 +537,7 @@ std::vector<State> makeAutomaton(int n) {
                 if(forward_extendable == 2 || (forward_extendable && v.extendable(0, 0))) {
                     v.reduce(x, y, n, stepsToOrigin);
 
-                    State parent = states[0];
+                    ShortWalk parent = states[0];
                     uint64_t tempSteps = (*v.steps())[0];
                     for(int i = 0; i < v.getLength() - 1; i++) {
                         parent = states[parent.childIndex[tempSteps & 1]];
@@ -565,7 +565,7 @@ std::vector<State> makeAutomaton(int n) {
 
 BigSum taxi(int automaton_size, int num_iterations) {
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-    std::vector<State> automaton = makeAutomaton(automaton_size);
+    std::vector<ShortWalk> automaton = makeAutomaton(automaton_size);
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     double totalTime = (double)(end - begin).count() / 1000000000.0;
     std::cout << automaton.size() << "-state automaton generated in " << totalTime << " seconds." << std::endl;

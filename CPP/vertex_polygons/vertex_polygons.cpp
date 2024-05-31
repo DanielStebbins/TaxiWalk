@@ -284,6 +284,7 @@ void run(int n) {
                     if(h.noVertexPolygon()) {
                         std::cout << "No Vertex Polygon for: " << h.toBinary() << std::endl;
                     }
+                    std::cout << h.toBinary() << std::endl;
                 }
             }
         }
@@ -303,6 +304,7 @@ void run(int n) {
                     if(v.noVertexPolygon()) {
                         std::cout << "No Vertex Polygon for: " << v.toBinary() << std::endl;
                     }
+                    std::cout << v.toBinary() << std::endl;
                 }
             }
         }

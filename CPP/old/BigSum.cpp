@@ -105,12 +105,12 @@ struct BigSum {
 	}
 };
 
-struct State {
+struct ShortWalk {
     BigSum var1;
     BigSum var2;
-    State *children[2]{};
+    ShortWalk *children[2]{};
 
-    State(uint64_t length, uint64_t steps):
+    ShortWalk(uint64_t length, uint64_t steps):
         var1(length), var2(steps), children{nullptr,nullptr} {}
 };
 
@@ -215,11 +215,11 @@ std::vector<int> getStepsToOrigin()
     return stepsToOrigin;
 }
 
-std::vector<State> makeAutomaton(int n)
+std::vector<ShortWalk> makeAutomaton(int n)
 {
     std::vector<int> stepsToOrigin = getStepsToOrigin();
 
-    std::vector<State> states;
+    std::vector<ShortWalk> states;
     states.reserve(91355000);
     states.emplace_back(0, 0);
 
@@ -247,7 +247,7 @@ std::vector<State> makeAutomaton(int n)
                     std::cout << "After Reduce: " << toBinary(steps, length) << std::endl;
                 }
 
-                State parent = states[0];
+                ShortWalk parent = states[0];
                 uint64_t tempSteps = steps;
                 for(int i = 0; i < length - 1; ++i)
                 {
@@ -282,7 +282,7 @@ std::vector<State> makeAutomaton(int n)
             {
                 reduce(steps, length, x, y, n, stepsToOrigin);
 
-                State parent = states[0];
+                ShortWalk parent = states[0];
                 uint64_t tempSteps = steps;
                 for(int i = 0; i < length - 1; i++)
                 {
@@ -314,7 +314,7 @@ std::vector<State> makeAutomaton(int n)
 
 BigSum taxi(int automaton_size, int num_iterations)
 {
-    std::vector<State> automaton = makeAutomaton(automaton_size);
+    std::vector<ShortWalk> automaton = makeAutomaton(automaton_size);
 
     std::cout << "Automaton Generated." << std::endl;
 

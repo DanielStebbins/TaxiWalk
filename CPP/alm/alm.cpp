@@ -6,6 +6,7 @@
 #include <vector>
 #include <chrono>
 #include <deque>
+#include <unordered_map>
 
 std::string toBinary64(uint64_t steps, uint16_t length) {
     if(length == 0) {
@@ -37,6 +38,11 @@ struct ShortWalk {
     
     ShortWalk(uint64_t steps, uint16_t length):
         steps(steps), length(length) {}
+
+    // Needed for unordered_map.
+    bool operator==(const ShortWalk &other) const {
+        return steps == other.steps && length == other.length;
+    }
 };
 
 
@@ -107,7 +113,50 @@ struct LongWalk {
             return binary;
         }
     }
+
+    // Needed for unordered_map.
+    bool operator==(const LongWalk &other) const {
+        if(length != other.length) {
+            return false;
+        }
+        for(int i = 0; i < steps.size(); i++) {
+            if(steps[i] != other.steps[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 };
+
+template <>
+
+struct std::hash<ShortWalk>
+{
+  std::size_t operator()(const ShortWalk& walk) const
+  {
+    using std::size_t;
+    using std::hash;
+    using std::string;
+
+    return (walk.steps << 16) + walk.length;
+  }
+};
+
+// struct std::hash<LongWalk>
+// {
+//   std::size_t operator()(const LongWalk& walk) const
+//   {
+//     using std::size_t;
+//     using std::hash;
+//     using std::string;
+
+//     size_t h = walk.length;
+//     for(int i = 0; i < walk.steps.size(); i++) {
+//         h ^= walk.steps[i];
+//     }
+//     return h;
+//   }
+// };
 
 void getEndPoint(uint64_t steps, uint16_t length, int &x, int &y) {
     // Step direction impacted by the starting point (Manhattan Lattice).
@@ -354,20 +403,12 @@ int extendable(LongWalk *jail, int startX, int startY) {
     return 0;
 }
 
-
-
-void run(int n) {
-    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+// Gets a list of all walks of the desired length. Used for the shorter of the two inputs to Alm's method.
+std::vector<ShortWalk> getShortWalks(int m) {
+    std::vector<ShortWalk> out;
     std::vector<ShortWalk> walks;
     // H start.
     walks.emplace_back(0, 1);
-    uint64_t counts[100] = {0};
-    counts[1] = 1;
-    uint64_t count = 0;
-    // uint64_t forward2Count = 0;
-
-    // std::ofstream f;
-    // f.open("brute.txt");
 
     while(!walks.empty()) {
         ShortWalk current = walks.back();
@@ -387,17 +428,12 @@ void run(int n) {
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
                 int forward_extendible = extendable(&walk, x, y);
-                // if(forward_extendible == 2) {
-                //     forward2Count++;
-                // }
                 if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
-                    if(length != n) {
+                    if(length != m) {
                         walks.emplace_back(steps, length);
+                    } else {
+                        out.emplace_back(steps, length);
                     }
-                    counts[length]++;
-                    // if(length == n) {
-                    //     f << toBinary64(steps, length) << std::endl;
-                    // }
                 }
             }
         }
@@ -415,45 +451,124 @@ void run(int n) {
             bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
             if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
                 int forward_extendible = extendable(&walk, x, y);
-                // if(forward_extendible == 2) {
-                //     forward2Count++;
-                // }
                 if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
-                    if(length != n) {
+                    if(length != m) {
                         walks.emplace_back(steps, length);
+                    } else {
+                        out.emplace_back(steps, length);
                     }
-                    counts[length]++;
-                    // if(length == n) {
-                    //     f << toBinary64(steps, length) << std::endl;
-                    // }
                 }
             }
         }
     }
-    // f.close();
-    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-    std::ofstream file("out.txt", std::ios_base::app);
-    for(int i = 1; i <= n; i++) {
-        std::cout << "N=" << i << ": " << (counts[i] << 1) << std::endl;
-        file << "N=" << i << ": " << (counts[i] << 1) << std::endl;
+    size_t size = out.size();
+    uint64_t mask = (1ULL << m) - 1;
+    for(int i = 0; i < size; i++) {
+        out.emplace_back((~out[i].steps) & mask, out[i].length);
     }
-    double totalTime = (double)(end - begin).count() / 1000000000.0;
-    std::cout << "Total Time: " << totalTime << std::endl;
+    return out;
+}
+
+void run(int m, int n, std::vector<ShortWalk> shortWalks) {
+    std::unordered_map<ShortWalk, int> indexMap;
+    for(int i = 0; i < shortWalks.size(); i++) {
+        indexMap[shortWalks[i]] = i;
+    }
+
+    std::vector<std::vector<uint32_t>> A(shortWalks.size(), std::vector<uint32_t>(shortWalks.size(), 0));
+
+    // Divided by 2 because the first half has all the H starts. We handle V starts later with 1's complement.
+    for(int i = 0; i < (A.size() >> 1); i++) {
+        std::vector<ShortWalk> walks;
+        walks.push_back(shortWalks[i]);
+
+        while(!walks.empty()) {
+            ShortWalk current = walks.back();
+            walks.pop_back();
+            int prevX = 0, prevY = 0;
+            getEndPoint(current.steps, current.length, prevX, prevY);
+
+            // Horizontal Step.
+            if(approach64(current.steps, current.length) != 2) {
+                uint16_t length = current.length + 1;
+                uint64_t steps = current.steps;
+                int x = 0, y = 0, _x = 0, _y = 0;
+                getEndPoint(steps, length, x, y);
+                LongWalk walk;
+                walk.steps.push_back(steps);
+                walk.length = length;
+                bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
+                if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
+                    int forward_extendible = extendable(&walk, x, y);
+                    if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
+                        if(length != n) {
+                            walks.emplace_back(steps, length);
+                        } else {
+                            A[i][indexMap[ShortWalk(steps >> (length - m), m)]]++;
+                        }
+                    }
+                }
+            }
+
+            // Vertical Step.
+            if(approach64(current.steps, current.length) != 1) {
+                uint16_t length = current.length + 1;
+                uint64_t steps = current.steps | (1ULL << current.length);
+
+                int x = 0, y = 0, _x = 0, _y = 0;
+                getEndPoint(steps, length, x, y);
+                LongWalk walk;
+                walk.steps.push_back(steps);
+                walk.length = length;
+                bool noNarrowFlag = noNarrow(&walk, prevX, prevY, x, y);
+                if(noLoop(steps, length-12, _x, _y, x, y) && noNarrowFlag) {
+                    int forward_extendible = extendable(&walk, x, y);
+                    if(forward_extendible == 2 || (forward_extendible && extendable(&walk, 0, 0))) {
+                        if(length != n) {
+                            walks.emplace_back(steps, length);
+                        } else {
+                            A[i][indexMap[ShortWalk(steps >> (length - m), m)]]++;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Filling in the V starts with 1's complement.
+    int half = A.size() >> 1;
+    uint64_t mask = (1ULL << m) - 1;
+    for(int i = half; i < A.size(); i++) {
+        for(int j = 0; j < A.size(); j++) {
+            ShortWalk unflipped = shortWalks[j];
+            ShortWalk flipped((~unflipped.steps) & mask, unflipped.length);
+            A[i][j] = A[i - half][indexMap[flipped]];
+        }
+    }
+
+    int count = 0;
+    std::ofstream file("out.txt");
+    for(int i = 0; i < A.size(); i++) {
+        for(int j = 0; j < A[i].size(); j++) {
+            file << A[i][j] << " ";
+            count += A[i][j];
+        }
+        file << std::endl;
+    }
     file.close();
-    // std::cout << forward2Count << std::endl;
+    std::cout << count << std::endl;
 }
 
 int main(int argc, char *argv[]) {
-    if(argc == 2)
-    {
-        int N = atoi(argv[1]);
-        run(N);
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+    if(argc == 3) {
+        int m = atoi(argv[1]);
+        int n = atoi(argv[2]);
+        std::vector<ShortWalk> shortWalks = getShortWalks(m);
+        run(m, n, shortWalks);
     }
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    double totalTime = (double)(end - begin).count() / 1000000000.0;
+    std::cout << "Total Time: " << totalTime << std::endl;
     return 0;
-
-    // LongWalk walk(0b000000001111111110011000000011111110, 36);
-    // int x = 0, y = 0;
-    // getEndPoint(walk.steps[0], walk.length, x, y);
-    // std::cout << extendable(&walk, 0, 0) << std::endl;
 }
