@@ -1,0 +1,35 @@
+A(16, 34) took 23 seconds to generate and a few seconds to compute the largest eigenvalue. (gives 5.297)
+Power iteration may be faster than the easy Python computation I'm doing right now, but the Python function is already parallel.
+
+
+.\a.exe 16 36
+27678476
+Total Time: 64.9867
+Eigenvalue: 9811.028131764453
+lambda: 5.286
+
+
+.\a.exe 18 36
+27678476
+Total Time: 69.562
+Eigenvalue: 3886.881041791485
+lambda: 5.276
+** 18 matrix size parameter seems to be pushing it, the eigenvalue calculation took ~1 minute.
+
+
+.\a.exe 20 36
+27678476
+Total Time: 88.4312
+Eigenvalue: 1543.667509145186 (took 19 minutes)
+lambda: 5.268
+
+.\a.exe 20 38
+68983362
+Total Time: 198.212
+Eigenvalue: 3848.7790441896163 (took 18 minutes and 10GB of RAM)
+lambda: 5.262
+
+
+.\a.exe 20 40
+171252602
+Total Time: 492.208
