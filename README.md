@@ -1,1 +1,1 @@
-The code needed for the numerical results of my (thesis)[https://etda.libraries.psu.edu/catalog/30016drs5972]
+The code needed for the numerical results of my [thesis](https://etda.libraries.psu.edu/catalog/30016drs5972)
