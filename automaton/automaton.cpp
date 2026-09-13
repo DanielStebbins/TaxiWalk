@@ -475,7 +475,7 @@ struct ShortWalk {
 };
 
 std::vector<int> getStepsToOrigin() {
-    std::ifstream ifs(R"(C:\Users\danrs\Documents\GitHub\TaxiWalk\CPP\StepsToNarrowAtOrigin.txt)");
+    std::ifstream ifs(R"(/home/daniel/repos/TaxiWalk/automaton/StepsToNarrowAtOrigin.txt)");
     std::string content((std::istreambuf_iterator<char>(ifs)), (std::istreambuf_iterator<char>()));
     std::stringstream stream(content);
     std::vector<int> stepsToOrigin;
